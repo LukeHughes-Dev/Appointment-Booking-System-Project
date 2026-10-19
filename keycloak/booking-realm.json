@@ -79,17 +79,17 @@
   ],
   "users": [
     {
-      "username": "customer@example.com",
-      "email": "customer@example.com",
+      "username": "client@example.com",
+      "email": "client@example.com",
       "firstName": "Casey",
-      "lastName": "Customer",
+      "lastName": "Client",
       "enabled": true,
       "emailVerified": true,
       "realmRoles": [],
       "credentials": [
         {
           "type": "password",
-          "value": "customer-demo",
+          "value": "client-demo",
           "temporary": false
         }
       ]

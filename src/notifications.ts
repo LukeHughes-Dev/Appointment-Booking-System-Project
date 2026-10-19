@@ -22,7 +22,7 @@ export function sendConfirmation(log: FastifyBaseLogger, booking: Booking): Conf
 
   const confirmation: Confirmation = {
     channel: 'email',
-    to: booking.customerEmail,
+    to: booking.clientEmail,
     message:
       `Your ${booking.service} appointment at ${booking.branch.name} with ` +
       `${booking.consultant.name} is booked for ${when}. Reference: ${booking.reference}.`,

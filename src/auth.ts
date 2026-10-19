@@ -13,7 +13,7 @@ export interface AuthUser {
   sub: string; // the identity provider's stable id for this person
   email: string;
   name?: string;
-  roles: string[]; // e.g. 'consultant', 'manager'; customers have none
+  roles: string[]; // e.g. 'consultant', 'manager'; clients have none
 }
 
 declare module 'fastify' {

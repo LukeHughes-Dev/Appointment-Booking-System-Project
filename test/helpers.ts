@@ -34,13 +34,13 @@ interface TokenOptions {
 
 // Builds a sign-in token like the identity provider would issue.
 export async function tokenFor(options: TokenOptions = {}) {
-  const claims: Record<string, unknown> = { email: options.email ?? 'customer@booking-test.example' };
+  const claims: Record<string, unknown> = { email: options.email ?? 'client@booking-test.example' };
   if (options.name) claims.name = options.name;
   if (options.roles) claims.realm_access = { roles: options.roles };
 
   return new SignJWT(claims)
     .setProtectedHeader({ alg: 'ES256' })
-    .setSubject(options.sub ?? 'test-customer')
+    .setSubject(options.sub ?? 'test-client')
     .setIssuer(options.issuer ?? TEST_ISSUER)
     .setAudience(options.audience ?? TEST_AUDIENCE)
     .setIssuedAt()
