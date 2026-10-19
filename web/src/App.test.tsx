@@ -6,6 +6,7 @@ import App from './App'
 import { AuthContext, type AuthState } from './auth/AuthContext'
 
 const consultant = { name: 'Nomsa', email: 'nomsa@example.com', accessToken: 'tok', roles: ['consultant'] }
+const manager = { name: 'Manager', email: 'manager@example.com', accessToken: 'tok', roles: ['manager'] }
 const client = { name: 'Client', email: 'client@example.com', accessToken: 'tok', roles: [] }
 
 function show(session: AuthState['session'], path = '/') {
@@ -32,6 +33,13 @@ describe('the two shells', () => {
     expect(screen.queryByRole('link', { name: 'Find a branch' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'My appointments' })).not.toBeInTheDocument()
     expect(screen.getByText('Staff')).toBeInTheDocument()
+  })
+
+  it('starts a manager on the branch summary', async () => {
+    show(manager)
+    expect(await screen.findByRole('heading', { name: 'Branch summary' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'My day' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Summary' })).toBeInTheDocument()
   })
 
   it('shows a client the branch finder and My appointments, and no staff links', async () => {

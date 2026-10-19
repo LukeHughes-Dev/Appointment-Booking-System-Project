@@ -96,3 +96,11 @@ a { color: var(--primary); }
 /* Staff shell: its own accent so it never looks like the client site */
 [data-shell="staff"] { --primary: #3f4fa3; --primary-hover: #323f84; --primary-soft: #e8ebf8; }
 .shell-tag { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 0.75rem; font-weight: 700; vertical-align: middle; }
+
+/* Summary */
+.table-wrap { overflow-x: auto; }
+.summary-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.summary-table caption { text-align: left; font-weight: 700; padding: 8px 0; }
+.summary-table th, .summary-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); }
+.summary-table th:first-child, .summary-table td:first-child { text-align: left; }
+.summary-table tfoot td, .summary-table tfoot th { font-weight: 700; background: var(--primary-soft); }

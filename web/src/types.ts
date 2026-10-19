@@ -52,3 +52,17 @@ export interface StaffAppointment {
   startsAt: string
   endsAt: string
 }
+
+export interface Counts {
+  upcoming: number
+  attended: number
+  noShow: number
+  notRecorded: number
+  cancelled: number
+}
+
+export interface BranchSummary {
+  branch: { id: string; name: string }
+  totals: Counts
+  consultants: ({ consultant: { id: string; name: string } } & Counts)[]
+}
