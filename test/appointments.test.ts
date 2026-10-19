@@ -193,3 +193,87 @@ describe('GET /appointments', () => {
     expect(res.statusCode).toBe(401);
   });
 });
+
+describe('DELETE /appointments/:reference', () => {
+  const alice = { sub: 'test-alice', email: 'alice@booking-test.example' };
+  const bob = { sub: 'test-bob', email: 'bob@booking-test.example' };
+
+  async function cancel(reference: string, who: { sub: string; email: string } | null, from = app) {
+    return from.inject({
+      method: 'DELETE',
+      url: `/appointments/${reference}`,
+      headers: who ? { authorization: `Bearer ${await tokenFor(who)}` } : {},
+    });
+  }
+
+  async function freeConsultantsAt10() {
+    const slots = await app.inject({ method: 'GET', url: `/branches/${MENLYN}/slots?date=2026-12-02&service=Save` });
+    return slots.json().find((s: { startsAt: string }) => s.startsAt === WEDNESDAY_10AM.replace('Z', '.000Z')).consultants.length;
+  }
+
+  it('cancels the client\'s own appointment and frees the slot', async () => {
+    const booked = await book({}, alice);
+    expect(await freeConsultantsAt10()).toBe(3);
+
+    const res = await cancel(booked.json().reference, alice);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ reference: booked.json().reference, status: 'cancelled' });
+    expect(await freeConsultantsAt10()).toBe(4);
+
+    const row = await pool.query('SELECT status FROM appointments WHERE reference = $1', [booked.json().reference]);
+    expect(row.rows[0].status).toBe('cancelled'); // kept, not deleted
+  });
+
+  it('answers 404 in the same way for another client\'s appointment and for one that does not exist', async () => {
+    const booked = await book({}, alice);
+    const someoneElses = await cancel(booked.json().reference, bob);
+    const missing = await cancel('APT-0000000000', bob);
+    expect(someoneElses.statusCode).toBe(404);
+    expect(missing.statusCode).toBe(404);
+    expect(someoneElses.json()).toEqual(missing.json());
+    expect(someoneElses.json().error).toBe('We could not find that appointment.');
+
+    const row = await pool.query('SELECT status FROM appointments WHERE reference = $1', [booked.json().reference]);
+    expect(row.rows[0].status).toBe('booked'); // untouched
+  });
+
+  it('says so when the appointment was already cancelled', async () => {
+    const booked = await book({}, alice);
+    await cancel(booked.json().reference, alice);
+    const again = await cancel(booked.json().reference, alice);
+    expect(again.statusCode).toBe(409);
+    expect(again.json().error).toBe('You have already cancelled this appointment.');
+  });
+
+  it('lets exactly one of two simultaneous cancellations succeed', async () => {
+    const booked = await book({}, alice);
+    const results = await Promise.all([
+      cancel(booked.json().reference, alice),
+      cancel(booked.json().reference, alice),
+    ]);
+    expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+  });
+
+  it('allows cancelling until 5 minutes after the start, not after', async () => {
+    const first = await book({}, alice);
+    const second = await book({ startsAt: '2026-12-03T08:00:00Z' }, alice);
+
+    const at4 = buildTestApp(() => new Date('2026-12-02T08:04:00Z')); // 4 minutes after the start
+    expect((await cancel(first.json().reference, alice, at4)).statusCode).toBe(200);
+    await at4.close();
+
+    const at6 = buildTestApp(() => new Date('2026-12-03T08:06:00Z')); // 6 minutes after the start
+    const late = await cancel(second.json().reference, alice, at6);
+    await at6.close();
+    expect(late.statusCode).toBe(409);
+    expect(late.json().error).toBe('This appointment has already started and can no longer be cancelled.');
+  });
+
+  it('requires sign-in', async () => {
+    expect((await cancel('APT-0000000000', null)).statusCode).toBe(401);
+  });
+
+  it('rejects a reference that is not in the right format', async () => {
+    expect((await cancel('not-a-reference', alice)).statusCode).toBe(400);
+  });
+});
