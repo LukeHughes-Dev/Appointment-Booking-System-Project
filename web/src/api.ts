@@ -11,12 +11,19 @@ export class ApiError extends Error {
 interface Options {
   token?: string | null
   signal?: AbortSignal
+  method?: string
+  body?: unknown
 }
 
-export async function apiFetch<T>(path: string, { token, signal }: Options = {}): Promise<T> {
+export async function apiFetch<T>(path: string, { token, signal, method, body }: Options = {}): Promise<T> {
   const response = await fetch(`${config.apiBase}${path}`, {
     signal,
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    method,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
   })
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))

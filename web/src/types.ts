@@ -13,3 +13,20 @@ export interface Branch {
   distanceKm: number | null // only when the client's position was sent
   closure: Closure | null // set while the branch is closed today
 }
+
+export interface Slot {
+  startsAt: string
+  endsAt: string
+  available: boolean
+  consultants: { id: string; name: string }[]
+}
+
+export interface Booking {
+  reference: string
+  branch: { id: string; name: string; timezone: string }
+  consultant: { id: string; name: string }
+  service: string
+  startsAt: string
+  endsAt: string
+  confirmation: { to: string; message: string }
+}
