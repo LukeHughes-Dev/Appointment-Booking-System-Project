@@ -1,0 +1,39 @@
+{
+  "name": "appointment-booking-system-project",
+  "version": "1.0.0",
+  "description": "This is a repo for the SE project, to create an Appointment Booking System for customers to schedule branch appointments and communicates a simulated confirmation of the appointment",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LukeHughes-Dev/Appointment-Booking-System-Project.git"
+  },
+  "keywords": [],
+  "author": "Luke Hughes",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/LukeHughes-Dev/Appointment-Booking-System-Project/issues"
+  },
+  "homepage": "https://github.com/LukeHughes-Dev/Appointment-Booking-System-Project#readme",
+  "dependencies": {
+    "fastify": "^5.12.7",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
