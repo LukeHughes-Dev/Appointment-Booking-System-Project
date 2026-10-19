@@ -83,3 +83,7 @@ a { color: var(--primary); }
 .choice[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
 .choice:disabled { background: #e6eaef; color: #7b8794; text-decoration: line-through; cursor: not-allowed; }
 .summary { margin: 0; }
+
+/* My appointments */
+.card-actions { display: flex; gap: 8px; align-items: center; }
+.button.danger { background: var(--error-text); border-color: var(--error-text); }

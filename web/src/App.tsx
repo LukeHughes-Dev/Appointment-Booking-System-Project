@@ -3,7 +3,7 @@ import { Header } from './components/Header'
 import { BranchPicker } from './pages/BranchPicker'
 import { Callback } from './pages/Callback'
 import { BookingPage } from './pages/BookingPage'
-import { AppointmentsComingNext } from './pages/ComingNext'
+import { MyAppointments } from './pages/MyAppointments'
 
 export default function App() {
   return (
@@ -16,7 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<BranchPicker />} />
           <Route path="/branches/:id/book" element={<BookingPage />} />
-          <Route path="/appointments" element={<AppointmentsComingNext />} />
+          <Route path="/appointments" element={<MyAppointments />} />
           <Route path="/callback" element={<Callback />} />
           <Route path="*" element={<p className="notice">We could not find that page.</p>} />
         </Routes>

@@ -30,3 +30,12 @@ export interface Booking {
   endsAt: string
   confirmation: { to: string; message: string }
 }
+
+export interface Appointment {
+  reference: string
+  branch: { id: string; name: string; timezone: string }
+  consultant: { id: string; name: string }
+  service: string
+  startsAt: string
+  endsAt: string
+}
