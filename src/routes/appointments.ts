@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { Pool } from 'pg';
 import type { createAuthenticate } from '../auth.js';
 import { createBooking, type BookingRequest } from '../bookings.js';
+import { cancelAppointment } from '../cancellations.js';
 import { sendConfirmation } from '../notifications.js';
 
 interface AppointmentRoutesOptions {
@@ -84,4 +85,34 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       endsAt: r.ends_at.toISOString(),
     }));
   });
+
+  app.delete<{ Params: { reference: string } }>(
+    '/appointments/:reference',
+    {
+      preHandler: authenticate,
+      schema: {
+        params: {
+          type: 'object',
+          required: ['reference'],
+          properties: { reference: { type: 'string', pattern: '^APT-[0-9A-F]{10}$' } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await cancelAppointment(pool, request.params.reference, request.user!.sub, now());
+
+      if (result.ok) return { reference: result.reference, status: 'cancelled' };
+
+      switch (result.reason) {
+        case 'not_found':
+          return reply.code(404).send({ error: 'We could not find that appointment.' });
+        case 'already_cancelled':
+          return reply.code(409).send({ error: 'You have already cancelled this appointment.' });
+        case 'already_started':
+          return reply
+            .code(409)
+            .send({ error: 'This appointment has already started and can no longer be cancelled.' });
+      }
+    },
+  );
 };
