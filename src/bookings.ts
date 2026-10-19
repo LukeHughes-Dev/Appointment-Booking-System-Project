@@ -9,8 +9,13 @@ export interface BookingRequest {
   branchId: string;
   service: string;
   startsAt: string;
-  customerEmail: string;
   consultantId?: string; // leave out to take any free consultant
+}
+
+// Who is booking: taken from the verified sign-in token, never from the request body.
+export interface Customer {
+  id: string;
+  email: string;
 }
 
 export interface Booking {
@@ -40,7 +45,12 @@ function isPgError(err: unknown, code: string) {
   return typeof err === 'object' && err !== null && (err as { code?: string }).code === code;
 }
 
-export async function createBooking(pool: Pool, req: BookingRequest, now: Date): Promise<BookingResult> {
+export async function createBooking(
+  pool: Pool,
+  req: BookingRequest,
+  customer: Customer,
+  now: Date,
+): Promise<BookingResult> {
   const startsAt = new Date(req.startsAt).toISOString();
 
   // The branch's own calendar date decides which day's hours and closures apply.
@@ -79,12 +89,13 @@ export async function createBooking(pool: Pool, req: BookingRequest, now: Date):
       try {
         const inserted = await pool.query(
           `INSERT INTO appointments
-             (reference, branch_id, consultant_id, service_type_id, customer_email, starts_at, ends_at)
-           SELECT $1, $2, $3, s.id, $4, $5::timestamptz,
-                  $5::timestamptz + make_interval(mins => s.duration_minutes)
-           FROM service_types s WHERE s.name = $6
+             (reference, branch_id, consultant_id, service_type_id, customer_id, customer_email,
+              starts_at, ends_at)
+           SELECT $1, $2, $3, s.id, $4, $5, $6::timestamptz,
+                  $6::timestamptz + make_interval(mins => s.duration_minutes)
+           FROM service_types s WHERE s.name = $7
            RETURNING reference, ends_at`,
-          [newReference(), req.branchId, consultant.id, req.customerEmail, startsAt, req.service],
+          [newReference(), req.branchId, consultant.id, customer.id, customer.email, startsAt, req.service],
         );
         const row = inserted.rows[0];
         return {
@@ -95,7 +106,7 @@ export async function createBooking(pool: Pool, req: BookingRequest, now: Date):
             branch: { id: branch.id, name: branch.name, timezone: branch.timezone },
             consultant,
             service: req.service,
-            customerEmail: req.customerEmail,
+            customerEmail: customer.email,
             startsAt,
             endsAt: row.ends_at.toISOString(),
           },

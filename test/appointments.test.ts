@@ -1,5 +1,5 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { buildTestApp, createTestPool } from './helpers.js';
+import { buildTestApp, createTestPool, tokenFor } from './helpers.js';
 
 // Fixed clock: 20 Nov 2026, 08:00 in South Africa. Every booking below is for later dates.
 const fixedNow = () => new Date('2026-11-20T06:00:00Z');
@@ -12,23 +12,20 @@ const pool = createTestPool();
 const app = buildTestApp(fixedNow);
 let counter = 0;
 
-function book(body: Record<string, unknown>) {
+// Each call is a different signed-in customer, unless one is given.
+async function book(body: Record<string, unknown>, customer?: { sub: string; email: string }) {
   counter += 1;
+  const who = customer ?? { sub: `test-customer-${counter}`, email: `customer${counter}@booking-test.example` };
   return app.inject({
     method: 'POST',
     url: '/appointments',
-    payload: {
-      branchId: MENLYN,
-      service: 'Save',
-      startsAt: WEDNESDAY_10AM,
-      customerEmail: `customer${counter}@booking-test.example`,
-      ...body,
-    },
+    headers: { authorization: `Bearer ${await tokenFor(who)}` },
+    payload: { branchId: MENLYN, service: 'Save', startsAt: WEDNESDAY_10AM, ...body },
   });
 }
 
 afterEach(async () => {
-  await pool.query("DELETE FROM appointments WHERE customer_email LIKE '%@booking-test.example'");
+  await pool.query("DELETE FROM appointments WHERE customer_id LIKE 'test-%'");
 });
 
 afterAll(async () => {
@@ -48,6 +45,31 @@ describe('POST /appointments', () => {
     expect(body.endsAt).toBe('2026-12-02T09:00:00.000Z'); // Save takes 60 minutes
     expect(body.confirmation.message).toContain(body.reference);
     expect(body.confirmation.message).toContain('10:00');
+  });
+
+  it('records the booking against the signed-in customer, not anything in the body', async () => {
+    const res = await book({}, { sub: 'test-luke', email: 'luke@booking-test.example' });
+    expect(res.json().customerEmail).toBe('luke@booking-test.example');
+    const row = await pool.query('SELECT customer_id FROM appointments WHERE reference = $1', [res.json().reference]);
+    expect(row.rows[0].customer_id).toBe('test-luke');
+  });
+
+  it('requires sign-in', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/appointments',
+      payload: { branchId: MENLYN, service: 'Save', startsAt: WEDNESDAY_10AM },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('ignores an email sent in the body and uses the one in the token', async () => {
+    const res = await book(
+      { customerEmail: 'someone.else@example.com' },
+      { sub: 'test-real', email: 'real@booking-test.example' },
+    );
+    expect(res.statusCode).toBe(201);
+    expect(res.json().customerEmail).toBe('real@booking-test.example');
   });
 
   it('books the consultant the customer asked for', async () => {
@@ -106,7 +128,7 @@ describe('POST /appointments', () => {
   });
 
   it('rejects bad input', async () => {
-    expect((await book({ customerEmail: 'not-an-email' })).statusCode).toBe(400);
+    expect((await book({ consultantId: 'abc' })).statusCode).toBe(400);
     expect((await book({ startsAt: 'tomorrow' })).statusCode).toBe(400);
     expect((await book({ branchId: '999' })).statusCode).toBe(404);
     expect((await book({ service: 'Nope' })).statusCode).toBe(404);
