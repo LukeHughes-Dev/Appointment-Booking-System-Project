@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -61,6 +62,29 @@ describe('the two shells', () => {
     localStorage.setItem('shell', 'staff')
     show(null)
     expect(await screen.findByRole('heading', { name: 'Staff sign in' })).toBeInTheDocument()
+  })
+
+  it('lets a visitor leave the staff sign-in for the client site and forgets the staff device', async () => {
+    localStorage.setItem('shell', 'staff')
+    show(null, '/staff')
+    await userEvent.click(screen.getByRole('link', { name: 'Looking for the client site?' }))
+    expect(await screen.findByRole('heading', { name: /branch/i })).toBeInTheDocument()
+    expect(localStorage.getItem('shell')).toBeNull()
+  })
+
+  it('forgets the staff device when staff sign out', async () => {
+    const signOut = vi.fn()
+    localStorage.setItem('shell', 'staff')
+    render(
+      <AuthContext.Provider value={{ session: consultant, loading: false, signIn: vi.fn(), signOut }}>
+        <MemoryRouter initialEntries={['/staff']}>
+          <App />
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+    expect(signOut).toHaveBeenCalled()
+    expect(localStorage.getItem('shell')).toBeNull()
   })
 
   it('shows a signed-out visitor on a normal device the branch finder', async () => {

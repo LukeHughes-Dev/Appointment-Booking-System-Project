@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { clearShellHint } from '../auth/roles'
 import { AccountMenu } from './AccountMenu'
 
 export function StaffHeader() {
@@ -13,7 +14,7 @@ export function StaffHeader() {
             My day
           </NavLink>
         </nav>
-        <AccountMenu />
+        <AccountMenu onSignOut={clearShellHint} />
       </div>
     </header>
   )

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { isStaff, setShellHint } from '../auth/roles'
+import { clearShellHint, isStaff, setShellHint } from '../auth/roles'
 import { StaffHeader } from '../components/StaffHeader'
 
 // The frame for staff. Anyone who is not signed in as staff sees a staff sign-in
@@ -32,13 +32,20 @@ export function StaffLayout() {
                 Sign in
               </button>
             </p>
+            <p>
+              <Link to="/" onClick={clearShellHint}>
+                Looking for the client site?
+              </Link>
+            </p>
           </>
         ) : !staff ? (
           <>
             <h1>This area is for staff</h1>
             <p className="notice">Your account does not have staff access.</p>
             <p>
-              <Link to="/">Go to the client site</Link>
+              <Link to="/" onClick={clearShellHint}>
+                Go to the client site
+              </Link>
             </p>
           </>
         ) : (

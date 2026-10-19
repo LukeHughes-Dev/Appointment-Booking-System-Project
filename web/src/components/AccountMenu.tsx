@@ -1,6 +1,6 @@
 import { useAuth } from '../auth/AuthContext'
 
-export function AccountMenu() {
+export function AccountMenu({ onSignOut }: { onSignOut?: () => void }) {
   const { session, loading, signIn, signOut } = useAuth()
   if (loading) return null
   return (
@@ -8,7 +8,10 @@ export function AccountMenu() {
       {session ? (
         <>
           <span className="who">Hi, {session.name}</span>
-          <button type="button" className="button quiet" onClick={() => void signOut()}>
+          <button type="button" className="button quiet" onClick={() => {
+              onSignOut?.()
+              void signOut()
+            }}>
             Sign out
           </button>
         </>

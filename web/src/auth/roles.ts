@@ -26,3 +26,11 @@ export function setShellHint(value: 'staff' | 'client') {
     // Private mode or blocked storage: the hint is a convenience, so carry on.
   }
 }
+
+export function clearShellHint() {
+  try {
+    localStorage.removeItem(KEY)
+  } catch {
+    // Nothing to clear.
+  }
+}
