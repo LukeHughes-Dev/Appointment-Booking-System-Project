@@ -12,7 +12,7 @@ verified token, and it does two separate things with it:
   same role names, so the API code does not change.
 - **Who you are (consultant record).** Today a consultant is linked to their record by the
   email in the token (`consultants.email`). Email is a convenient demo key, but it can change.
-  The link is meant to be reviewed: a unique, stable staff identifier such as a staff number
+  The link is meant to be reviewed: a unique, stable staff identifier such as a CP number
   is a better key, because it never changes and cannot clash. Moving to it means adding that
   identifier as a claim in the token and matching on it in `consultantFor()`
   (`src/routes/staff.ts`), with a unique index on the column. Nothing else changes.
