@@ -45,7 +45,7 @@ export function StaffSummary() {
           setError(
             e instanceof ApiError && e.status === 403
               ? 'This page is for managers.'
-              : e instanceof ApiError && e.status === 400
+              : e instanceof ApiError && (e.status === 400 || e.status === 404)
                 ? e.message
                 : 'We could not load the summary. Please try again.',
           )

@@ -15,12 +15,17 @@ let nomsaId: string;
 let counter = 0;
 
 beforeAll(async () => {
+  await pool.query(
+    `INSERT INTO branch_managers (branch_id, email)
+     SELECT id, 'summary-centurion-manager@example.com' FROM branches WHERE name = 'Pretoria Centurion'`,
+  );
   nomsaId = (await pool.query("SELECT id::text FROM consultants WHERE name = 'Nomsa'")).rows[0].id;
 });
 afterEach(async () => {
   await pool.query("DELETE FROM appointments WHERE client_id LIKE 'summary-%'");
 });
 afterAll(async () => {
+  await pool.query("DELETE FROM branch_managers WHERE email = 'summary-centurion-manager@example.com'");
   await bookingApp.close();
   await laterApp.close();
   await pool.end();
@@ -51,6 +56,20 @@ describe('GET /staff/summary', () => {
   it('is for managers only', async () => {
     expect((await laterApp.inject({ method: 'GET', url: `/staff/summary?from=${MONDAY}&to=${MONDAY}` })).statusCode).toBe(401);
     expect((await summary(`?from=${MONDAY}&to=${MONDAY}`, NOMSA)).statusCode).toBe(403);
+  });
+
+  it('shows a manager only their own branch', async () => {
+    await bookNomsa('2026-12-07T06:00:00Z'); // a Menlyn appointment
+    const own = (await summary(`?from=${MONDAY}&to=${MONDAY}`)).json();
+    expect(own.map((b: { branch: { id: string } }) => b.branch.id)).toEqual([MENLYN]);
+
+    const centurion = { sub: 'summary-centurion', email: 'summary-centurion-manager@example.com', roles: ['manager'] };
+    expect((await summary(`?from=${MONDAY}&to=${MONDAY}`, centurion)).json()).toEqual([]);
+  });
+
+  it('says so when the manager is not linked to a branch', async () => {
+    const nobody = { sub: 'summary-nobody', email: 'nobody@example.com', roles: ['manager'] };
+    expect((await summary(`?from=${MONDAY}&to=${MONDAY}`, nobody)).statusCode).toBe(404);
   });
 
   it('rejects a backwards or far too long period', async () => {

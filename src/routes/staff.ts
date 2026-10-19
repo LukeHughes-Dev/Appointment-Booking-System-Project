@@ -116,8 +116,17 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
     },
   );
 
-  // Managers: how many appointments each branch and consultant had in a period.
-  // Dates are the branch's own local dates, both inclusive.
+  // A branch manager: the branch they run, matched by the email in the verified token.
+  async function branchFor(email: string) {
+    const { rows } = await pool.query(
+      'SELECT branch_id::text FROM branch_managers WHERE lower(email) = lower($1)',
+      [email],
+    );
+    return rows[0]?.branch_id as string | undefined;
+  }
+
+  // Branch managers: how many appointments their branch and its consultants had in a
+  // period. Dates are the branch's own local dates, both inclusive.
   app.get<{ Querystring: { from: string; to: string } }>(
     '/staff/summary',
     {
@@ -134,6 +143,9 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
       },
     },
     async (request, reply) => {
+      const branchId = await branchFor(request.user!.email);
+      if (!branchId) return reply.code(404).send({ error: 'No branch is linked to this sign-in' });
+
       const { from, to } = request.query;
       const days = (Date.parse(to) - Date.parse(from)) / 86_400_000;
       if (days < 0) return reply.code(400).send({ error: 'The end date must not be before the start date.' });
@@ -156,10 +168,11 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
          FROM appointments a
          JOIN branches b    ON b.id = a.branch_id
          JOIN consultants c ON c.id = a.consultant_id
-         WHERE (a.starts_at AT TIME ZONE b.timezone)::date BETWEEN $1::date AND $2::date
+         WHERE a.branch_id = $4
+           AND (a.starts_at AT TIME ZONE b.timezone)::date BETWEEN $1::date AND $2::date
          GROUP BY b.id, b.name, c.id, c.name
          ORDER BY b.name, c.name`,
-        [from, to, now().toISOString()],
+        [from, to, now().toISOString(), branchId],
       );
 
       type Counts = { upcoming: number; attended: number; noShow: number; notRecorded: number; cancelled: number };

@@ -19,3 +19,23 @@ verified token, and it does two separate things with it:
 
 Either way the identifier must be unique, and it is always read from the verified token,
 never from anything the client sends.
+
+## Staff roles and scope
+
+| Who | Sees | Status |
+| --- | --- | --- |
+| Consultant | Their own appointments (all dates, or one day), and records attended or no-show | Built |
+| Branch manager | A summary of their own branch only: per consultant and a branch total | Built |
+| Regional manager | The same summary across every branch in a region | Noted, not built |
+
+A branch manager is linked to exactly one branch (`branch_managers`, matched by the email in the
+verified token), and the summary query is limited to that branch on the server, not just hidden in
+the screen.
+
+**Regional and higher levels (not built).** The same idea extends upwards, to regional managers
+and the roles above branch level (for example BM and BMO views). It needs a region concept
+(`regions`, and `branches.region_id`) and a scope per manager (a branch, or a region) in place of
+the single branch link. The summary query filters on a single branch id today. A regional view would
+change that to a list of branch ids (`a.branch_id = ANY(...)`) and keep grouping by branch, as it does now.
+The screens would not change much; the work is in the data model, the scope lookup and the tests
+that prove one manager can never see outside their scope.

@@ -57,4 +57,10 @@ describe('StaffSummary', () => {
     show()
     expect(await screen.findByRole('alert')).toHaveTextContent('This page is for managers.')
   })
+
+  it('shows the message when no branch is linked to the manager', async () => {
+    fetchMock.mockResolvedValue(reply(404, { error: 'No branch is linked to this sign-in' }))
+    show()
+    expect(await screen.findByRole('alert')).toHaveTextContent('No branch is linked to this sign-in')
+  })
 })
