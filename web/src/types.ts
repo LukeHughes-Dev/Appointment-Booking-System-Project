@@ -39,3 +39,16 @@ export interface Appointment {
   startsAt: string
   endsAt: string
 }
+
+export type Outcome = 'attended' | 'no_show' | null
+
+export interface StaffAppointment {
+  reference: string
+  status: 'booked' | 'cancelled'
+  outcome: Outcome
+  clientEmail: string
+  branch: { id: string; name: string; timezone: string }
+  service: string
+  startsAt: string
+  endsAt: string
+}

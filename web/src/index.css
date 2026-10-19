@@ -87,3 +87,12 @@ a { color: var(--primary); }
 /* My appointments */
 .card-actions { display: flex; gap: 8px; align-items: center; }
 .button.danger { background: var(--error-text); border-color: var(--error-text); }
+
+/* Staff */
+.toolbar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-block: var(--space); }
+.card.cancelled { opacity: 0.6; }
+.card.cancelled strong { text-decoration: line-through; }
+
+/* Staff shell: its own accent so it never looks like the client site */
+[data-shell="staff"] { --primary: #3f4fa3; --primary-hover: #323f84; --primary-soft: #e8ebf8; }
+.shell-tag { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 0.75rem; font-weight: 700; vertical-align: middle; }

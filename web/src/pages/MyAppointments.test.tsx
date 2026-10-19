@@ -27,7 +27,7 @@ function show(session: AuthState['session']) {
     </AuthContext.Provider>,
   )
 }
-const signedIn = { name: 'Client', email: 'client@example.com', accessToken: 'tok' }
+const signedIn = { name: 'Client', email: 'client@example.com', accessToken: 'tok', roles: [] }
 
 beforeEach(() => {
   fetchMock = vi.fn()

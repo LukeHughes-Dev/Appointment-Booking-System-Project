@@ -3,12 +3,23 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { AuthContext, type AuthState, type Session } from './AuthContext'
 import { userManager } from './userManager'
 
+function rolesFrom(token: string): string[] {
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const claims = JSON.parse(atob(payload))
+    return claims.realm_access?.roles ?? []
+  } catch {
+    return []
+  }
+}
+
 function toSession(user: User | null): Session | null {
   if (!user || user.expired) return null
   return {
     name: user.profile.name ?? user.profile.email ?? 'Signed in',
     email: user.profile.email ?? '',
     accessToken: user.access_token,
+    roles: rolesFrom(user.access_token),
   }
 }
 
