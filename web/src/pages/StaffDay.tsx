@@ -15,7 +15,7 @@ function formatWhen(a: StaffAppointment, withDate: boolean) {
 }
 
 export function StaffDay() {
-  const { session, loading, signIn } = useAuth()
+  const { session } = useAuth()
   const token = session?.accessToken
   const [date, setDate] = useState(today())
   const [all, setAll] = useState(false)
@@ -66,22 +66,6 @@ export function StaffDay() {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
     }
     await load()
-  }
-
-  if (loading) return null
-
-  if (!session) {
-    return (
-      <>
-        <h1>My day</h1>
-        <p className="notice">Sign in to see your appointments.</p>
-        <p>
-          <button type="button" className="button" onClick={() => void signIn('/staff')}>
-            Sign in
-          </button>
-        </p>
-      </>
-    )
   }
 
   return (

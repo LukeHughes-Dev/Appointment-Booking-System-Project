@@ -37,12 +37,6 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('StaffDay', () => {
-  it('asks a signed-out visitor to sign in', () => {
-    show(null)
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
   it('asks for the chosen day, and for every day when "Show all dates" is ticked', async () => {
     fetchMock.mockResolvedValue(reply(200, []))
     show(consultant)
