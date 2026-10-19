@@ -1,13 +1,20 @@
 import Fastify from 'fastify';
+import type { Pool } from 'pg';
 
 export interface AppOptions {
+  pool: Pool;
   logger?: boolean;
 }
 
 // Builds the app without starting it, so tests can call it with app.inject()
-// and never open a real port.
-export function buildApp(options: AppOptions = {}) {
-  const app = Fastify({ logger: options.logger ?? false });
+// and never open a real port. The pool is passed in, not created here.
+export function buildApp({ pool, logger = false }: AppOptions) {
+  const app = Fastify({ logger });
+
+  // Closing the app also closes the database pool.
+  app.addHook('onClose', async () => {
+    await pool.end();
+  });
 
   app.get('/health', async () => ({ status: 'ok' }));
 

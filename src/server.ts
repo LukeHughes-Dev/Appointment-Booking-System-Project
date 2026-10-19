@@ -1,7 +1,15 @@
 import { buildApp } from './app.js';
+import { createPool } from './db.js';
 
 const port = Number(process.env.PORT ?? 3000);
-const app = buildApp({ logger: true });
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.error('DATABASE_URL is not set. Copy .env.example to .env.');
+  process.exit(1);
+}
+
+const app = buildApp({ pool: createPool(databaseUrl), logger: true });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
