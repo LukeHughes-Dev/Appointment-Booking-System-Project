@@ -28,7 +28,7 @@ export function buildApp({ pool, auth, logger = false, now = () => new Date() }:
   });
 
   app.get('/health', async () => ({ status: 'ok' }));
-  app.register(branchRoutes, { pool });
+  app.register(branchRoutes, { pool, now });
   app.register(meRoutes, { authenticate });
   app.register(slotRoutes, { pool, now });
   app.register(appointmentRoutes, { pool, now, authenticate });
