@@ -21,5 +21,21 @@ services:
       timeout: 3s
       retries: 10
 
+  # Local identity provider (OpenID Connect). Demo users and roles come from
+  # keycloak/booking-realm.json, imported on first start. Data is not kept between
+  # `docker compose down` runs, so the realm is rebuilt fresh each time.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_dev_password}
+      KC_HOSTNAME: http://localhost:8080
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+
 volumes:
   pgdata:

@@ -1,0 +1,134 @@
+{
+  "realm": "booking",
+  "displayName": "Appointment Booking",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": false,
+  "accessTokenLifespan": 900,
+  "roles": {
+    "realm": [
+      {
+        "name": "consultant",
+        "description": "Branch consultant: can see and adjust their own day"
+      },
+      {
+        "name": "manager",
+        "description": "Branch manager: can adjust any consultant's day"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "booking-web",
+      "name": "Appointment booking web app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:8081/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:8081"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:8081/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "booking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "booking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "booking-cli",
+      "name": "Local scripts and checks (password grant, demo only)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "booking-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "booking-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "customer@example.com",
+      "email": "customer@example.com",
+      "firstName": "Casey",
+      "lastName": "Customer",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer-demo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "nomsa@example.com",
+      "email": "nomsa@example.com",
+      "firstName": "Nomsa",
+      "lastName": "Dlamini",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "consultant"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "consultant-demo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "manager@example.com",
+      "email": "manager@example.com",
+      "firstName": "Morgan",
+      "lastName": "Manager",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [
+        "manager"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager-demo",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
