@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import type { Pool } from 'pg';
+import { branchRoutes } from './routes/branches.js';
 
 export interface AppOptions {
   pool: Pool;
@@ -17,6 +18,7 @@ export function buildApp({ pool, logger = false }: AppOptions) {
   });
 
   app.get('/health', async () => ({ status: 'ok' }));
+  app.register(branchRoutes, { pool });
 
   return app;
 }
