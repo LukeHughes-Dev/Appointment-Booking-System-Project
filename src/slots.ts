@@ -1,5 +1,8 @@
 import type { Pool } from 'pg';
 
+export const SLOT_GRID_MINUTES = 15; // slots start every 15 minutes
+export const MIN_NOTICE_MINUTES = 30; // nothing can be booked closer than this, so walk-ins can be helped
+
 export interface SlotQuery {
   branchId: string;
   date: string; // local date at the branch, YYYY-MM-DD

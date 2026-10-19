@@ -1,9 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Pool } from 'pg';
-import { findSlots } from '../slots.js';
-
-const GRID_MINUTES = 15; // slots start every 15 minutes
-const NOTICE_MINUTES = 30; // nothing can be booked closer than this, so walk-ins can be helped
+import { findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from '../slots.js';
 
 interface SlotRoutesOptions {
   pool: Pool;
@@ -45,8 +42,8 @@ export const slotRoutes: FastifyPluginAsync<SlotRoutesOptions> = async (app, { p
         date,
         service,
         now: now(),
-        gridMinutes: GRID_MINUTES,
-        noticeMinutes: NOTICE_MINUTES,
+        gridMinutes: SLOT_GRID_MINUTES,
+        noticeMinutes: MIN_NOTICE_MINUTES,
       });
     },
   );

@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import type { Pool } from 'pg';
+import { appointmentRoutes } from './routes/appointments.js';
 import { branchRoutes } from './routes/branches.js';
 import { slotRoutes } from './routes/slots.js';
 
@@ -22,6 +23,7 @@ export function buildApp({ pool, logger = false, now = () => new Date() }: AppOp
   app.get('/health', async () => ({ status: 'ok' }));
   app.register(branchRoutes, { pool });
   app.register(slotRoutes, { pool, now });
+  app.register(appointmentRoutes, { pool, now });
 
   return app;
 }
