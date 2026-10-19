@@ -4,6 +4,9 @@ import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import type { Booking, Branch, Slot } from '../types'
 
+// Only the times are needed here.
+type Busy = { startsAt: string; endsAt: string }
+
 // Matches the seeded services. A later step can load these from the API.
 const SERVICES = [
   { name: 'Save', minutes: 60 },
@@ -33,6 +36,8 @@ export function BookingPage() {
   const [error, setError] = useState<string | null>(null)
   const [booking, setBooking] = useState<Booking | null>(null)
   const [busy, setBusy] = useState(false)
+  const [mine, setMine] = useState<Busy[]>([])
+  const token = session?.accessToken
 
   function choose(changes: Record<string, string>) {
     const next = new URLSearchParams(params)
@@ -50,6 +55,16 @@ export function BookingPage() {
       .catch(() => {})
     return () => controller.abort()
   }, [id])
+
+  // The client's own upcoming appointments, so overlapping times can be greyed out.
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
+    apiFetch<Busy[]>('/appointments', { token, signal: controller.signal })
+      .then(setMine)
+      .catch(() => {})
+    return () => controller.abort()
+  }, [token])
 
   useEffect(() => {
     if (!service || !date) return
@@ -70,7 +85,10 @@ export function BookingPage() {
 
   const zone = branch?.timezone ?? 'Africa/Johannesburg'
   const visibleSlots = service && date ? slots : null
-  const chosen = visibleSlots?.find((s) => s.startsAt === start && s.available) ?? null
+  const clash = (s: Slot) =>
+    mine.some((a) => new Date(a.startsAt) < new Date(s.endsAt) && new Date(s.startsAt) < new Date(a.endsAt))
+  const bookable = (s: Slot) => s.available && !clash(s)
+  const chosen = visibleSlots?.find((s) => s.startsAt === start && bookable(s)) ?? null
 
   async function book() {
     if (!chosen || !id) return
@@ -150,7 +168,8 @@ export function BookingPage() {
                 key={s.startsAt}
                 type="button"
                 className="choice"
-                disabled={!s.available}
+                disabled={!bookable(s)}
+                title={clash(s) ? 'You already have an appointment at this time' : undefined}
                 aria-pressed={start === s.startsAt}
                 onClick={() => choose({ start: s.startsAt, consultant: '' })}
               >

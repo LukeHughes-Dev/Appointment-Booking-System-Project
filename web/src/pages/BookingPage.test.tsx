@@ -36,6 +36,7 @@ function show(session: AuthState['session'], signIn = vi.fn()) {
 beforeEach(() => {
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return reply(201, booked)
+    if (url === '/api/appointments') return reply(200, [])
     return url.includes('/slots') ? reply(200, slots) : reply(200, branches)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -47,6 +48,17 @@ describe('BookingPage', () => {
     show(null)
     expect(await screen.findByRole('button', { name: '08:00' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '09:00' })).toBeDisabled()
+  })
+
+  it('greys out times that overlap the client\'s own appointment', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/appointments') {
+        return reply(200, [{ reference: 'APT-1', startsAt: slots[0].startsAt, endsAt: '2030-01-07T06:30:00.000Z' }])
+      }
+      return url.includes('/slots') ? reply(200, slots) : reply(200, branches)
+    })
+    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok' })
+    await waitFor(() => expect(screen.getByRole('button', { name: '08:00' })).toBeDisabled())
   })
 
   it('asks a signed-out client to sign in before booking', async () => {
