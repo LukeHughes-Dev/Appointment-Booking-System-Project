@@ -54,4 +54,34 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       }
     },
   );
+
+  // The signed-in client's own appointments: booked and not yet over, soonest first.
+  // The client comes from the verified token, so nobody can ask for someone else's.
+  app.get('/appointments', { preHandler: authenticate }, async (request) => {
+    const { rows } = await pool.query(
+      `SELECT a.reference, a.status, a.starts_at, a.ends_at,
+              b.id::text AS branch_id, b.name AS branch_name, b.timezone,
+              c.id::text AS consultant_id, c.name AS consultant_name,
+              s.name AS service
+       FROM appointments a
+       JOIN branches b       ON b.id = a.branch_id
+       JOIN consultants c    ON c.id = a.consultant_id
+       JOIN service_types s  ON s.id = a.service_type_id
+       WHERE a.client_id = $1
+         AND a.status = 'booked'
+         AND a.ends_at > $2::timestamptz
+       ORDER BY a.starts_at`,
+      [request.user!.sub, now().toISOString()],
+    );
+
+    return rows.map((r) => ({
+      reference: r.reference,
+      status: r.status,
+      branch: { id: r.branch_id, name: r.branch_name, timezone: r.timezone },
+      consultant: { id: r.consultant_id, name: r.consultant_name },
+      service: r.service,
+      startsAt: r.starts_at.toISOString(),
+      endsAt: r.ends_at.toISOString(),
+    }));
+  });
 };
