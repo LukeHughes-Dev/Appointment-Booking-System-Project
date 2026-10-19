@@ -6,6 +6,7 @@ import { BranchPicker } from './pages/BranchPicker'
 import { Callback } from './pages/Callback'
 import { MyAppointments } from './pages/MyAppointments'
 import { StaffDay } from './pages/StaffDay'
+import { StaffSummary } from './pages/StaffSummary'
 import { ClientLayout } from './layouts/ClientLayout'
 import { StaffLayout } from './layouts/StaffLayout'
 
@@ -18,12 +19,20 @@ function Home() {
   return <BranchPicker />
 }
 
+// Managers start on the summary, consultants on their day.
+function StaffHome() {
+  const { session } = useAuth()
+  if (session?.roles.includes('manager')) return <Navigate to="/staff/summary" replace />
+  return <StaffDay />
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/callback" element={<Callback />} />
       <Route element={<StaffLayout />}>
-        <Route path="/staff" element={<StaffDay />} />
+        <Route path="/staff" element={<StaffHome />} />
+        <Route path="/staff/summary" element={<StaffSummary />} />
       </Route>
       <Route element={<ClientLayout />}>
         <Route path="/" element={<Home />} />
