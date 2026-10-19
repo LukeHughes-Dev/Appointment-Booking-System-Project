@@ -96,6 +96,30 @@ describe('POST /appointments', () => {
     expect(second.statusCode).toBe(409);
   });
 
+  it('refuses a client a second, overlapping appointment with a different consultant', async () => {
+    const me = { sub: 'test-client-overlap', email: 'overlap@booking-test.example' };
+    const first = await book({}, me);
+    expect(first.statusCode).toBe(201);
+    const otherConsultant = (
+      await app.inject({ method: 'GET', url: `/branches/${MENLYN}/slots?date=2026-12-02&service=Save` })
+    )
+      .json()
+      .find((s: { startsAt: string }) => new Date(s.startsAt).getTime() === new Date(WEDNESDAY_10AM).getTime())
+      .consultants[0].id;
+    const second = await book({ consultantId: otherConsultant }, me);
+    expect(second.statusCode).toBe(409);
+    expect(second.json().error).toBe('You already have an appointment at this time.');
+  });
+
+  it('refuses an overlapping appointment at another branch, but allows back-to-back ones', async () => {
+    const me = { sub: 'test-client-overlap2', email: 'overlap2@booking-test.example' };
+    expect((await book({}, me)).statusCode).toBe(201); // 10:00-11:00 at Menlyn
+    const clash = await book({ branchId: '5', startsAt: '2026-12-02T08:30:00Z' }, me);
+    expect(clash.statusCode).toBe(409);
+    const after = await book({ branchId: '5', startsAt: '2026-12-02T09:00:00Z' }, me); // 11:00
+    expect(after.statusCode).toBe(201);
+  });
+
   it('lets exactly one of two simultaneous bookings for the same consultant succeed', async () => {
     const slots = await app.inject({ method: 'GET', url: `/branches/${MENLYN}/slots?date=2026-12-02&service=Save` });
     const consultantId = slots.json()[8].consultants[0].id;

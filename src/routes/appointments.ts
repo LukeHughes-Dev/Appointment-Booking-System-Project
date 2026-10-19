@@ -50,6 +50,8 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
           return reply.code(404).send({ error: 'Service not found' });
         case 'not_a_slot':
           return reply.code(422).send({ error: 'That is not a bookable time at this branch' });
+        case 'client_busy':
+          return reply.code(409).send({ error: 'You already have an appointment at this time.' });
         case 'unavailable':
           return reply.code(409).send({ error: 'That slot was just taken. Please choose another time.' });
       }

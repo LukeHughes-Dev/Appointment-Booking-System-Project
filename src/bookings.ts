@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import type { Pool } from 'pg';
 import { findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from './slots.js';
 
-const EXCLUSION_VIOLATION = '23P01'; // the consultant already has a booked appointment that overlaps
+const EXCLUSION_VIOLATION = '23P01'; // an overlap rule was broken: see which constraint
+const CLIENT_OVERLAP_CONSTRAINT = 'appointments_client_no_overlap';
 const UNIQUE_VIOLATION = '23505'; // only the reference is unique, so this means a reference clash
 
 export interface BookingRequest {
@@ -33,6 +34,7 @@ export type BookingFailure =
   | 'branch_not_found'
   | 'service_not_found'
   | 'not_a_slot' // not a time the branch offers: closed, off the grid, too soon or in the past
+  | 'client_busy' // the client already has an appointment that overlaps this time
   | 'unavailable'; // a real slot, but nobody (or not the chosen consultant) is free
 
 export type BookingResult = { ok: true; booking: Booking } | { ok: false; reason: BookingFailure };
@@ -112,7 +114,13 @@ export async function createBooking(
           },
         };
       } catch (err) {
-        if (isPgError(err, EXCLUSION_VIOLATION)) break; // taken: try the next consultant
+        if (isPgError(err, EXCLUSION_VIOLATION)) {
+          // The client's own overlap will not change with another consultant: stop.
+          if ((err as { constraint?: string }).constraint === CLIENT_OVERLAP_CONSTRAINT) {
+            return { ok: false, reason: 'client_busy' };
+          }
+          break; // consultant taken: try the next one
+        }
         if (isPgError(err, UNIQUE_VIOLATION)) continue; // reference clash: try a new reference
         throw err;
       }
