@@ -12,10 +12,10 @@ const pool = createTestPool();
 const app = buildTestApp(fixedNow);
 let counter = 0;
 
-// Each call is a different signed-in customer, unless one is given.
-async function book(body: Record<string, unknown>, customer?: { sub: string; email: string }) {
+// Each call is a different signed-in client, unless one is given.
+async function book(body: Record<string, unknown>, client?: { sub: string; email: string }) {
   counter += 1;
-  const who = customer ?? { sub: `test-customer-${counter}`, email: `customer${counter}@booking-test.example` };
+  const who = client ?? { sub: `test-client-${counter}`, email: `client${counter}@booking-test.example` };
   return app.inject({
     method: 'POST',
     url: '/appointments',
@@ -25,7 +25,7 @@ async function book(body: Record<string, unknown>, customer?: { sub: string; ema
 }
 
 afterEach(async () => {
-  await pool.query("DELETE FROM appointments WHERE customer_id LIKE 'test-%'");
+  await pool.query("DELETE FROM appointments WHERE client_id LIKE 'test-%'");
 });
 
 afterAll(async () => {
@@ -47,11 +47,11 @@ describe('POST /appointments', () => {
     expect(body.confirmation.message).toContain('10:00');
   });
 
-  it('records the booking against the signed-in customer, not anything in the body', async () => {
+  it('records the booking against the signed-in client, not anything in the body', async () => {
     const res = await book({}, { sub: 'test-luke', email: 'luke@booking-test.example' });
-    expect(res.json().customerEmail).toBe('luke@booking-test.example');
-    const row = await pool.query('SELECT customer_id FROM appointments WHERE reference = $1', [res.json().reference]);
-    expect(row.rows[0].customer_id).toBe('test-luke');
+    expect(res.json().clientEmail).toBe('luke@booking-test.example');
+    const row = await pool.query('SELECT client_id FROM appointments WHERE reference = $1', [res.json().reference]);
+    expect(row.rows[0].client_id).toBe('test-luke');
   });
 
   it('requires sign-in', async () => {
@@ -65,14 +65,14 @@ describe('POST /appointments', () => {
 
   it('ignores an email sent in the body and uses the one in the token', async () => {
     const res = await book(
-      { customerEmail: 'someone.else@example.com' },
+      { clientEmail: 'someone.else@example.com' },
       { sub: 'test-real', email: 'real@booking-test.example' },
     );
     expect(res.statusCode).toBe(201);
-    expect(res.json().customerEmail).toBe('real@booking-test.example');
+    expect(res.json().clientEmail).toBe('real@booking-test.example');
   });
 
-  it('books the consultant the customer asked for', async () => {
+  it('books the consultant the client asked for', async () => {
     const slots = await app.inject({ method: 'GET', url: `/branches/${MENLYN}/slots?date=2026-12-02&service=Save` });
     const johan = slots.json()[8].consultants.find((c: { name: string }) => c.name === 'Johan');
     const res = await book({ consultantId: johan.id });

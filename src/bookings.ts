@@ -13,7 +13,7 @@ export interface BookingRequest {
 }
 
 // Who is booking: taken from the verified sign-in token, never from the request body.
-export interface Customer {
+export interface Client {
   id: string;
   email: string;
 }
@@ -24,7 +24,7 @@ export interface Booking {
   branch: { id: string; name: string; timezone: string };
   consultant: { id: string; name: string };
   service: string;
-  customerEmail: string;
+  clientEmail: string;
   startsAt: string;
   endsAt: string;
 }
@@ -48,7 +48,7 @@ function isPgError(err: unknown, code: string) {
 export async function createBooking(
   pool: Pool,
   req: BookingRequest,
-  customer: Customer,
+  client: Client,
   now: Date,
 ): Promise<BookingResult> {
   const startsAt = new Date(req.startsAt).toISOString();
@@ -89,13 +89,13 @@ export async function createBooking(
       try {
         const inserted = await pool.query(
           `INSERT INTO appointments
-             (reference, branch_id, consultant_id, service_type_id, customer_id, customer_email,
+             (reference, branch_id, consultant_id, service_type_id, client_id, client_email,
               starts_at, ends_at)
            SELECT $1, $2, $3, s.id, $4, $5, $6::timestamptz,
                   $6::timestamptz + make_interval(mins => s.duration_minutes)
            FROM service_types s WHERE s.name = $7
            RETURNING reference, ends_at`,
-          [newReference(), req.branchId, consultant.id, customer.id, customer.email, startsAt, req.service],
+          [newReference(), req.branchId, consultant.id, client.id, client.email, startsAt, req.service],
         );
         const row = inserted.rows[0];
         return {
@@ -106,7 +106,7 @@ export async function createBooking(
             branch: { id: branch.id, name: branch.name, timezone: branch.timezone },
             consultant,
             service: req.service,
-            customerEmail: customer.email,
+            clientEmail: client.email,
             startsAt,
             endsAt: row.ends_at.toISOString(),
           },

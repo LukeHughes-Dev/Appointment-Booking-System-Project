@@ -1,7 +1,7 @@
 {
   "name": "appointment-booking-system-project",
   "version": "1.0.0",
-  "description": "This is a repo for the SE project, to create an Appointment Booking System for customers to schedule branch appointments and communicates a simulated confirmation of the appointment",
+  "description": "This is a repo for the SE project, to create an Appointment Booking System for clients to schedule branch appointments and communicates a simulated confirmation of the appointment",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {

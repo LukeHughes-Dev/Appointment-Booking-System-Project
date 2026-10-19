@@ -26,7 +26,7 @@ describe('sign-in', () => {
     });
   });
 
-  it('gives a customer no roles', async () => {
+  it('gives a client no roles', async () => {
     expect((await me(await tokenFor())).json().roles).toEqual([]);
   });
 
