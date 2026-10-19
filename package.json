@@ -27,6 +27,7 @@
   "homepage": "https://github.com/LukeHughes-Dev/Appointment-Booking-System-Project#readme",
   "dependencies": {
     "fastify": "^5.12.7",
+    "jose": "^6.2.12",
     "pg": "^8.23.1"
   },
   "devDependencies": {

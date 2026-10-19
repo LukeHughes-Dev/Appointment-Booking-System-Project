@@ -1,3 +1,4 @@
+import { createRemoteJWKSet } from 'jose';
 import { buildApp } from './app.js';
 import { createPool } from './db.js';
 
@@ -9,7 +10,22 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const app = buildApp({ pool: createPool(databaseUrl), logger: true });
+const issuer = process.env.OIDC_ISSUER;
+const audience = process.env.OIDC_AUDIENCE;
+
+if (!issuer || !audience) {
+  console.error('OIDC_ISSUER and OIDC_AUDIENCE are not set. Copy .env.example to .env.');
+  process.exit(1);
+}
+
+// The identity provider publishes the public keys that verify its tokens.
+const jwksUri = process.env.OIDC_JWKS_URI ?? `${issuer}/protocol/openid-connect/certs`;
+
+const app = buildApp({
+  pool: createPool(databaseUrl),
+  auth: { issuer, audience, getKey: createRemoteJWKSet(new URL(jwksUri)) },
+  logger: true,
+});
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
