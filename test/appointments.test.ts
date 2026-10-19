@@ -134,3 +134,62 @@ describe('POST /appointments', () => {
     expect((await book({ service: 'Nope' })).statusCode).toBe(404);
   });
 });
+
+describe('GET /appointments', () => {
+  const alice = { sub: 'test-alice', email: 'alice@booking-test.example' };
+  const bob = { sub: 'test-bob', email: 'bob@booking-test.example' };
+
+  async function mine(who: { sub: string; email: string }, from = app) {
+    return from.inject({
+      method: 'GET',
+      url: '/appointments',
+      headers: { authorization: `Bearer ${await tokenFor(who)}` },
+    });
+  }
+
+  it('lists only the signed-in client\'s booked appointments, soonest first', async () => {
+    await book({ startsAt: '2026-12-03T10:00:00Z' }, alice); // later one first, to prove the ordering
+    await book({ startsAt: '2026-12-02T08:00:00Z' }, alice);
+    await book({ startsAt: '2026-12-02T08:00:00Z' }, bob);
+
+    const res = await mine(alice);
+    const list = res.json();
+    expect(res.statusCode).toBe(200);
+    expect(list).toHaveLength(2);
+    expect(list.map((a: { startsAt: string }) => a.startsAt)).toEqual([
+      '2026-12-02T08:00:00.000Z',
+      '2026-12-03T10:00:00.000Z',
+    ]);
+    expect(list[0]).toMatchObject({
+      status: 'booked',
+      service: 'Save',
+      branch: { name: 'Pretoria Menlyn', timezone: 'Africa/Johannesburg' },
+    });
+    expect(list[0].reference).toMatch(/^APT-/);
+    expect(list[0].consultant.name).toEqual(expect.any(String));
+  });
+
+  it('never shows one client another client\'s appointments', async () => {
+    await book({}, alice);
+    expect((await mine(bob)).json()).toEqual([]);
+  });
+
+  it('leaves out cancelled appointments', async () => {
+    const booked = await book({}, alice);
+    await pool.query("UPDATE appointments SET status = 'cancelled' WHERE reference = $1", [booked.json().reference]);
+    expect((await mine(alice)).json()).toEqual([]);
+  });
+
+  it('leaves out appointments that are already over', async () => {
+    await book({}, alice); // 2 December, 10:00 to 11:00 local
+    const later = buildTestApp(() => new Date('2026-12-02T09:30:00Z')); // 11:30 local that day
+    const res = await mine(alice, later);
+    await later.close();
+    expect(res.json()).toEqual([]);
+  });
+
+  it('requires sign-in', async () => {
+    const res = await app.inject({ method: 'GET', url: '/appointments' });
+    expect(res.statusCode).toBe(401);
+  });
+});
