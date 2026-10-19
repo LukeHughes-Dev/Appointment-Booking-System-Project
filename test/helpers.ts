@@ -5,6 +5,6 @@ import { createPool } from '../src/db.js';
 const databaseUrl =
   process.env.DATABASE_URL ?? 'postgres://booking:booking_dev_password@localhost:5432/booking';
 
-export function buildTestApp() {
-  return buildApp({ pool: createPool(databaseUrl) });
+export function buildTestApp(now?: () => Date) {
+  return buildApp({ pool: createPool(databaseUrl), now });
 }
