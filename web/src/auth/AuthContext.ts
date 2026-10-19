@@ -4,6 +4,7 @@ export interface Session {
   name: string
   email: string
   accessToken: string
+  roles: string[] // only decides which screens to offer; the API enforces access
 }
 
 export interface AuthState {

@@ -3,6 +3,7 @@ import { Header } from './components/Header'
 import { BranchPicker } from './pages/BranchPicker'
 import { Callback } from './pages/Callback'
 import { BookingPage } from './pages/BookingPage'
+import { StaffDay } from './pages/StaffDay'
 import { MyAppointments } from './pages/MyAppointments'
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/" element={<BranchPicker />} />
           <Route path="/branches/:id/book" element={<BookingPage />} />
           <Route path="/appointments" element={<MyAppointments />} />
+          <Route path="/staff" element={<StaffDay />} />
           <Route path="/callback" element={<Callback />} />
           <Route path="*" element={<p className="notice">We could not find that page.</p>} />
         </Routes>

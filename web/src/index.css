@@ -87,3 +87,8 @@ a { color: var(--primary); }
 /* My appointments */
 .card-actions { display: flex; gap: 8px; align-items: center; }
 .button.danger { background: var(--error-text); border-color: var(--error-text); }
+
+/* Staff */
+.toolbar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-block: var(--space); }
+.card.cancelled { opacity: 0.6; }
+.card.cancelled strong { text-decoration: line-through; }

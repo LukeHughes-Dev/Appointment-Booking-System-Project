@@ -57,7 +57,7 @@ describe('BookingPage', () => {
       }
       return url.includes('/slots') ? reply(200, slots) : reply(200, branches)
     })
-    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok' })
+    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok', roles: [] })
     await waitFor(() => expect(screen.getByRole('button', { name: '08:00' })).toBeDisabled())
   })
 
@@ -69,7 +69,7 @@ describe('BookingPage', () => {
   })
 
   it('books the chosen time and shows the confirmation', async () => {
-    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok' })
+    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok', roles: [] })
     await userEvent.click(await screen.findByRole('button', { name: '08:00' }))
     await userEvent.click(screen.getByRole('button', { name: 'Confirm booking' }))
     expect(await screen.findByText(/Reference: ABC123/)).toBeInTheDocument()
@@ -83,7 +83,7 @@ describe('BookingPage', () => {
       if (init?.method === 'POST') return reply(409, { error: 'That slot was just taken. Please choose another time.' })
       return url.includes('/slots') ? reply(200, slots) : reply(200, branches)
     })
-    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok' })
+    show({ name: 'Client', email: 'client@example.com', accessToken: 'tok', roles: [] })
     await userEvent.click(await screen.findByRole('button', { name: '08:00' }))
     await userEvent.click(screen.getByRole('button', { name: 'Confirm booking' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('just taken'))

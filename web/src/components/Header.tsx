@@ -15,6 +15,7 @@ export function Header() {
             Find a branch
           </NavLink>
           <NavLink to="/appointments">My appointments</NavLink>
+          {session?.roles.includes('consultant') && <NavLink to="/staff">My day</NavLink>}
         </nav>
         <div className="account">
           {loading ? null : session ? (
