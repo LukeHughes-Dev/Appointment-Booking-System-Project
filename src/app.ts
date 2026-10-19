@@ -5,6 +5,7 @@ import { appointmentRoutes } from './routes/appointments.js';
 import { branchRoutes } from './routes/branches.js';
 import { meRoutes } from './routes/me.js';
 import { slotRoutes } from './routes/slots.js';
+import { staffRoutes } from './routes/staff.js';
 
 export interface AppOptions {
   pool: Pool;
@@ -32,6 +33,7 @@ export function buildApp({ pool, auth, logger = false, now = () => new Date() }:
   app.register(meRoutes, { authenticate });
   app.register(slotRoutes, { pool, now });
   app.register(appointmentRoutes, { pool, now, authenticate });
+  app.register(staffRoutes, { pool, now, authenticate });
 
   return app;
 }
