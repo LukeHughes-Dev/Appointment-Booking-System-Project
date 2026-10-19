@@ -1,0 +1,25 @@
+# Local development stack. `docker compose up -d` starts Postgres with the schema
+# and seed data already loaded. Settings come from .env (copy .env.example), and
+# every value has a default so the stack also starts without one.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-booking}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-booking_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-booking}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Postgres runs every .sql file in this folder, in name order, but only the
+      # first time the data volume is empty. To reload, run `docker compose down -v`.
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
