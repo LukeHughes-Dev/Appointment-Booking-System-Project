@@ -121,8 +121,8 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
     },
   );
 
-  // One click: move to the same consultant's next free slot.
-  app.post<{ Params: { reference: string } }>(
+  // Move to a time the client chose, with the same consultant unless another is named.
+  app.post<{ Params: { reference: string }; Body: { startsAt: string; consultantId?: string } }>(
     '/appointments/:reference/reschedule',
     {
       preHandler: authenticate,
@@ -132,10 +132,25 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
           required: ['reference'],
           properties: { reference: { type: 'string', pattern: '^APT-[0-9A-F]{10}$' } },
         },
+        body: {
+          type: 'object',
+          required: ['startsAt'],
+          additionalProperties: false,
+          properties: {
+            startsAt: { type: 'string', format: 'date-time' },
+            consultantId: { type: 'string', pattern: '^[0-9]+$' },
+          },
+        },
       },
     },
     async (request, reply) => {
-      const result = await rescheduleAppointment(pool, request.params.reference, request.user!.sub, now());
+      const result = await rescheduleAppointment(
+        pool,
+        request.params.reference,
+        request.user!.sub,
+        request.body,
+        now(),
+      );
 
       if (result.ok) return result;
 
@@ -148,10 +163,19 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
           return reply
             .code(409)
             .send({ error: 'This appointment has already started and can no longer be moved.' });
-        case 'no_availability':
-          return reply
-            .code(409)
-            .send({ error: 'Your consultant has no free time in the next two weeks. Please book again.' });
+        case 'not_a_slot':
+          return reply.code(422).send({ error: 'That is not a bookable time at this branch' });
+        case 'same_time':
+          return reply.code(422).send({ error: 'That is the time you already have.' });
+        case 'client_busy':
+          return reply.code(409).send({ error: 'You already have an appointment at this time.' });
+        case 'consultant_unavailable':
+          return reply.code(409).send({
+            error: `${result.consultant.name} is not available at that time.`,
+            code: 'consultant_unavailable',
+            consultant: result.consultant,
+            available: result.available,
+          });
       }
     },
   );
