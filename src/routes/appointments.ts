@@ -4,6 +4,7 @@ import type { createAuthenticate } from '../auth.js';
 import { createBooking, type BookingRequest } from '../bookings.js';
 import { cancelAppointment } from '../cancellations.js';
 import { sendConfirmation } from '../notifications.js';
+import { windowState } from '../rules.js';
 
 interface AppointmentRoutesOptions {
   pool: Pool;
@@ -85,6 +86,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       service: r.service,
       startsAt: r.starts_at.toISOString(),
       endsAt: r.ends_at.toISOString(),
+      window: windowState(r.starts_at, now()),
     }));
   });
 
