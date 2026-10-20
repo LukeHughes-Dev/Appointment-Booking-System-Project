@@ -46,8 +46,16 @@ npm run dev                     # API on http://localhost:3000
 cd web && npm install && npm run dev   # web app on http://localhost:5173
 ```
 
-Optional: `npm run seed:demo` fills Pretoria Menlyn with about three weeks of past appointments, so
-the consultant and manager screens have data. It is safe to run again.
+Optional demo data (both are safe to run again, and need the database and, for the second, the
+identity provider):
+
+- `npm run seed:demo` fills every branch with three weeks of past appointments (some cancelled, some
+  no-shows, and the latest working day left "not recorded" for consultants to mark) and two weeks of
+  upcoming ones, so every screen has something to show. Only rows for fictional `demo-` clients are touched.
+- `npm run demo:live` creates one appointment for client@example.com with Nomsa that starts in about
+  4 minutes, so its 10-minute window is open straight away. Sign in as the client (My appointments)
+  and as nomsa@example.com in a private window to try the chat and Change time. The app will not
+  book a time that close, so the script writes to the database directly.
 
 ## Build and test
 
