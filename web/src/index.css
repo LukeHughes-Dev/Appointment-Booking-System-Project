@@ -53,6 +53,7 @@ a { color: var(--primary); }
 .button:disabled { background: #e6eaef; border-color: #e6eaef; color: #7b8794; cursor: not-allowed; }
 .button.quiet { background: transparent; color: var(--primary); }
 .button.quiet:hover:not(:disabled) { background: var(--primary-soft); }
+.badge { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 0.8rem; font-weight: 700; }
 
 .finder { display: grid; gap: var(--space); grid-template-columns: 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space); }
 @media (min-width: 720px) { .finder { grid-template-columns: 1fr 1fr; align-items: start; } }

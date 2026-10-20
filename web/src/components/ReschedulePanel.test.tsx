@@ -11,6 +11,7 @@ const appointment = {
   startsAt: '2030-01-07T08:00:00.000Z', // 10:00 on a Monday
   endsAt: '2030-01-07T09:00:00.000Z',
   window: 'upcoming' as const,
+  unreadMessages: 0,
 }
 const confirmation = (who: string) => ({ to: 'client@example.com', message: `Your Save appointment with ${who} has moved. Reference: APT-0123456789.` })
 const NOMSA = { id: '7', name: 'Nomsa' }

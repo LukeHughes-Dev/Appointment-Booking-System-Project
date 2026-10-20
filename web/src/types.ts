@@ -53,6 +53,7 @@ export interface Appointment {
   startsAt: string
   endsAt: string
   window: WindowState
+  unreadMessages: number // messages from the consultant that this client has not read yet
 }
 
 export type Outcome = 'attended' | 'no_show' | null
@@ -67,6 +68,7 @@ export interface StaffAppointment {
   startsAt: string
   endsAt: string
   window: WindowState
+  unreadMessages: number // messages from the client that this consultant has not read yet
 }
 
 export interface Counts {

@@ -14,6 +14,7 @@ const past = {
   startsAt: '2020-01-07T08:00:00.000Z',
   endsAt: '2020-01-07T09:00:00.000Z',
   window: 'closed',
+  unreadMessages: 0,
 }
 const future = { ...past, reference: 'APT-0000000002', startsAt: '2999-01-07T08:00:00.000Z', endsAt: '2999-01-07T09:00:00.000Z' }
 const cancelled = { ...past, reference: 'APT-0000000003', status: 'cancelled' }
@@ -79,6 +80,12 @@ describe('StaffDay', () => {
     fetchMock.mockResolvedValue(reply(403, { error: 'You do not have access to this' }))
     show({ ...consultant, roles: [] })
     expect(await screen.findByRole('alert')).toHaveTextContent('This page is for consultants.')
+  })
+
+  it('shows how many new messages the client has sent', async () => {
+    fetchMock.mockResolvedValue(reply(200, [{ ...past, window: 'open', unreadMessages: 1 }]))
+    show(consultant)
+    expect(await screen.findByRole('button', { name: /Chat with client/ })).toHaveTextContent('1 new')
   })
 
   it('offers a chat with the client only while the window is open', async () => {
