@@ -13,6 +13,7 @@ const past = {
   service: 'Save',
   startsAt: '2020-01-07T08:00:00.000Z',
   endsAt: '2020-01-07T09:00:00.000Z',
+  window: 'closed',
 }
 const future = { ...past, reference: 'APT-0000000002', startsAt: '2999-01-07T08:00:00.000Z', endsAt: '2999-01-07T09:00:00.000Z' }
 const cancelled = { ...past, reference: 'APT-0000000003', status: 'cancelled' }
@@ -72,5 +73,16 @@ describe('StaffDay', () => {
     fetchMock.mockResolvedValue(reply(403, { error: 'You do not have access to this' }))
     show({ ...consultant, roles: [] })
     expect(await screen.findByRole('alert')).toHaveTextContent('This page is for consultants.')
+  })
+
+  it('offers a chat with the client only while the window is open', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('/messages') ? reply(200, []) : reply(200, [{ ...past, window: 'open' }, future]),
+    )
+    show(consultant)
+    const buttons = await screen.findAllByRole('button', { name: 'Chat with client' })
+    expect(buttons).toHaveLength(1)
+    await userEvent.click(buttons[0])
+    expect(await screen.findByLabelText('Message to the client')).toBeInTheDocument()
   })
 })

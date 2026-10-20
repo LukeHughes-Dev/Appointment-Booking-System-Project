@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
+import { Chat } from '../components/Chat'
 import type { Appointment } from '../types'
 
 function formatWhen(a: Appointment) {
@@ -21,6 +22,7 @@ export function MyAppointments() {
   const [items, setItems] = useState<Appointment[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [chatting, setChatting] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = useCallback(
@@ -121,9 +123,19 @@ export function MyAppointments() {
             </div>
             <div className="card-actions">
               {a.window === 'open' && confirming !== a.reference && (
-                <button type="button" className="button" onClick={() => void reschedule(a.reference)}>
-                  Move to next available
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="button quiet"
+                    aria-expanded={chatting === a.reference}
+                    onClick={() => setChatting(chatting === a.reference ? null : a.reference)}
+                  >
+                    Chat with {a.consultant.name}
+                  </button>
+                  <button type="button" className="button" onClick={() => void reschedule(a.reference)}>
+                    Move to next available
+                  </button>
+                </>
               )}
               {confirming === a.reference ? (
                 <>
@@ -140,6 +152,14 @@ export function MyAppointments() {
                 </button>
               )}
             </div>
+            {a.window === 'open' && chatting === a.reference && (
+              <Chat
+                path={`/appointments/${a.reference}/messages`}
+                token={token}
+                me="client"
+                otherName={a.consultant.name}
+              />
+            )}
           </li>
         ))}
       </ul>

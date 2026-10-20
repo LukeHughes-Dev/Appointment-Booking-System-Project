@@ -71,3 +71,10 @@ export interface BranchSummary {
   totals: Counts
   consultants: ({ consultant: { id: string; name: string } } & Counts)[]
 }
+
+export interface ChatMessage {
+  id: string
+  from: 'client' | 'consultant'
+  body: string
+  sentAt: string
+}

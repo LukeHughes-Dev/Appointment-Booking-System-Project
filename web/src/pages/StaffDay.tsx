@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
+import { Chat } from '../components/Chat'
 import type { Outcome, StaffAppointment } from '../types'
 
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -21,6 +22,7 @@ export function StaffDay() {
   const [all, setAll] = useState(false)
   const [items, setItems] = useState<StaffAppointment[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [chatting, setChatting] = useState<string | null>(null)
   const [asOf, setAsOf] = useState(0) // when the list was loaded: decides what has started
 
   const load = useCallback(
@@ -48,8 +50,11 @@ export function StaffDay() {
     if (!token) return
     const controller = new AbortController()
     const start = setTimeout(() => void load(controller.signal), 0)
+    // Refresh now and then, so a chat button appears when an appointment's window opens.
+    const refresh = setInterval(() => void load(controller.signal), 30_000)
     return () => {
       clearTimeout(start)
+      clearInterval(refresh)
       controller.abort()
     }
   }, [token, load])
@@ -104,6 +109,18 @@ export function StaffDay() {
                   {a.status === 'cancelled' ? ' · Cancelled' : ''}
                 </span>
               </div>
+              {a.status === 'booked' && a.window === 'open' && (
+                <div className="card-actions">
+                  <button
+                    type="button"
+                    className="button quiet"
+                    aria-expanded={chatting === a.reference}
+                    onClick={() => setChatting(chatting === a.reference ? null : a.reference)}
+                  >
+                    Chat with client
+                  </button>
+                </div>
+              )}
               {canRecord && (
                 <div className="card-actions" role="group" aria-label={`Outcome for ${a.reference}`}>
                   <button
@@ -123,6 +140,14 @@ export function StaffDay() {
                     No-show
                   </button>
                 </div>
+              )}
+              {a.status === 'booked' && a.window === 'open' && chatting === a.reference && (
+                <Chat
+                  path={`/staff/appointments/${a.reference}/messages`}
+                  token={token}
+                  me="consultant"
+                  otherName="the client"
+                />
               )}
             </li>
           )

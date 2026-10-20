@@ -110,4 +110,13 @@ describe('MyAppointments', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Move to next available' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('no free time')
   })
+
+  it('opens a chat with the consultant while the window is open', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('/messages') ? reply(200, []) : reply(200, [{ ...appointment, window: 'open' }]),
+    )
+    show(signedIn)
+    await userEvent.click(await screen.findByRole('button', { name: 'Chat with Nomsa' }))
+    expect(await screen.findByLabelText('Message to Nomsa')).toBeInTheDocument()
+  })
 })
