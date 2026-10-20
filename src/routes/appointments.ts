@@ -42,7 +42,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       const result = await createBooking(pool, request.body, { id: user.sub, email: user.email }, now());
 
       if (result.ok) {
-        const confirmation = sendConfirmation(request.log, result.booking);
+        const confirmation = sendConfirmation(request.log, result.booking, 'booked');
         return reply.code(201).send({ ...result.booking, confirmation });
       }
 
@@ -105,9 +105,13 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       },
     },
     async (request, reply) => {
-      const result = await cancelAppointment(pool, request.params.reference, request.user!.sub, now());
+      const user = request.user!;
+      const result = await cancelAppointment(pool, request.params.reference, user.sub, user.email, now());
 
-      if (result.ok) return { reference: result.reference, status: 'cancelled' };
+      if (result.ok) {
+        const confirmation = sendConfirmation(request.log, result.appointment, 'cancelled');
+        return { reference: result.reference, status: 'cancelled', confirmation };
+      }
 
       switch (result.reason) {
         case 'not_found':
@@ -220,15 +224,20 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       },
     },
     async (request, reply) => {
+      const user = request.user!;
       const result = await rescheduleAppointment(
         pool,
         request.params.reference,
-        request.user!.sub,
+        user.sub,
+        user.email,
         request.body,
         now(),
       );
 
-      if (result.ok) return result;
+      if (result.ok) {
+        const { appointment, ...moved } = result;
+        return { ...moved, confirmation: sendConfirmation(request.log, appointment, 'moved') };
+      }
 
       switch (result.reason) {
         case 'not_found':

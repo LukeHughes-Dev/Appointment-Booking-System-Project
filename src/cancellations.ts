@@ -1,8 +1,9 @@
 import type { Pool } from 'pg';
+import type { AppointmentSummary } from './notifications.js';
 import { WINDOW_MINUTES_AFTER_START } from './rules.js';
 
 export type CancelResult =
-  | { ok: true; reference: string }
+  | { ok: true; reference: string; appointment: AppointmentSummary }
   | { ok: false; reason: 'not_found' | 'already_cancelled' | 'already_started' };
 
 // Cancels a client's own appointment. The row is kept with status 'cancelled' (the
@@ -11,12 +12,19 @@ export async function cancelAppointment(
   pool: Pool,
   reference: string,
   clientId: string,
+  clientEmail: string,
   now: Date,
 ): Promise<CancelResult> {
   // Filtering on client_id means another client's reference looks exactly like one
   // that does not exist.
   const found = await pool.query(
-    'SELECT status, starts_at FROM appointments WHERE reference = $1 AND client_id = $2',
+    `SELECT a.status, a.starts_at, s.name AS service, b.id::text AS branch_id, b.name AS branch_name,
+            b.timezone, c.id::text AS consultant_id, c.name AS consultant_name
+     FROM appointments a
+     JOIN service_types s ON s.id = a.service_type_id
+     JOIN branches b      ON b.id = a.branch_id
+     JOIN consultants c   ON c.id = a.consultant_id
+     WHERE a.reference = $1 AND a.client_id = $2`,
     [reference, clientId],
   );
   const appointment = found.rows[0];
@@ -35,5 +43,16 @@ export async function cancelAppointment(
     [reference, clientId],
   );
   if (updated.rowCount === 0) return { ok: false, reason: 'already_cancelled' };
-  return { ok: true, reference };
+  return {
+    ok: true,
+    reference,
+    appointment: {
+      reference,
+      service: appointment.service,
+      branch: { id: appointment.branch_id, name: appointment.branch_name, timezone: appointment.timezone },
+      consultant: { id: appointment.consultant_id, name: appointment.consultant_name },
+      clientEmail,
+      startsAt: appointment.starts_at.toISOString(),
+    },
+  };
 }

@@ -59,13 +59,17 @@ describe('MyAppointments', () => {
   it('asks for confirmation, then cancels and refreshes the list', async () => {
     fetchMock
       .mockResolvedValueOnce(reply(200, [appointment]))
-      .mockResolvedValueOnce(reply(200, { reference: appointment.reference, status: 'cancelled' }))
+      .mockResolvedValueOnce(reply(200, {
+        reference: appointment.reference,
+        status: 'cancelled',
+        confirmation: { to: 'client@example.com', message: 'Your Save appointment is cancelled. Reference: APT-0123456789.' },
+      }))
       .mockResolvedValueOnce(reply(200, []))
     show(signedIn)
     await userEvent.click(await screen.findByRole('button', { name: 'Cancel appointment' }))
     expect(fetchMock).toHaveBeenCalledTimes(1)
     await userEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' }))
-    expect(await screen.findByText(/APT-0123456789 is cancelled/)).toBeInTheDocument()
+    expect(await screen.findByText(/is cancelled\. Reference: APT-0123456789\. A confirmation was sent to client@example.com/)).toBeInTheDocument()
     expect(fetchMock.mock.calls[1][1].method).toBe('DELETE')
     expect(await screen.findByText(/no upcoming appointments/)).toBeInTheDocument()
   })

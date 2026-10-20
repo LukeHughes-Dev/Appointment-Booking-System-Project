@@ -241,7 +241,11 @@ describe('DELETE /appointments/:reference', () => {
 
     const res = await cancel(booked.json().reference, alice);
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ reference: booked.json().reference, status: 'cancelled' });
+    expect(res.json().reference).toBe(booked.json().reference);
+    expect(res.json().status).toBe('cancelled');
+    expect(res.json().confirmation.to).toBe(alice.email);
+    expect(res.json().confirmation.message).toContain('is cancelled');
+    expect(res.json().confirmation.message).toContain(booked.json().reference);
     expect(await freeConsultantsAt10()).toBe(4);
 
     const row = await pool.query('SELECT status FROM appointments WHERE reference = $1', [booked.json().reference]);

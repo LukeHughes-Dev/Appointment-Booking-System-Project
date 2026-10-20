@@ -21,6 +21,12 @@ export interface Slot {
   consultants: { id: string; name: string }[]
 }
 
+// The simulated message the API "sends" when an appointment is booked, moved or cancelled.
+export interface Confirmation {
+  to: string
+  message: string
+}
+
 export interface Booking {
   reference: string
   branch: { id: string; name: string; timezone: string }
@@ -28,7 +34,7 @@ export interface Booking {
   service: string
   startsAt: string
   endsAt: string
-  confirmation: { to: string; message: string }
+  confirmation: Confirmation
 }
 
 // Where "now" sits relative to the 10-minute window around the start (see src/rules.ts).

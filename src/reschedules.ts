@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import type { AppointmentSummary } from './notifications.js';
 import { windowState } from './rules.js';
 import { findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from './slots.js';
 
@@ -6,7 +7,14 @@ const EXCLUSION_VIOLATION = '23P01';
 const CLIENT_OVERLAP_CONSTRAINT = 'appointments_client_no_overlap';
 
 export type RescheduleResult =
-  | { ok: true; reference: string; startsAt: string; endsAt: string; consultant: { id: string; name: string } }
+  | {
+      ok: true;
+      reference: string;
+      startsAt: string;
+      endsAt: string;
+      consultant: { id: string; name: string };
+      appointment: AppointmentSummary;
+    }
   | { ok: false; reason: 'not_found' | 'not_booked' | 'already_over' | 'not_a_slot' | 'same_time' | 'client_busy' }
   // The chosen consultant is not free then. `available` lists who is, so the client can
   // pick someone else or ask for the chosen consultant's next free time.
@@ -20,12 +28,13 @@ export async function rescheduleAppointment(
   pool: Pool,
   reference: string,
   clientId: string,
+  clientEmail: string,
   choice: { startsAt: string; consultantId?: string },
   now: Date,
 ): Promise<RescheduleResult> {
   const found = await pool.query(
     `SELECT a.status, a.starts_at, a.branch_id::text, a.consultant_id::text,
-            s.name AS service,
+            s.name AS service, b.name AS branch_name, b.timezone,
             (($1::timestamptz) AT TIME ZONE b.timezone)::date::text AS today,
             (($4::timestamptz) AT TIME ZONE b.timezone)::date::text AS day
      FROM appointments a
@@ -83,7 +92,21 @@ export async function rescheduleAppointment(
     );
     if (updated.rowCount === 0) return { ok: false, reason: 'not_booked' };
     const row = updated.rows[0];
-    return { ok: true, reference, startsAt: row.starts_at.toISOString(), endsAt: row.ends_at.toISOString(), consultant: chosen };
+    return {
+      ok: true,
+      reference,
+      startsAt: row.starts_at.toISOString(),
+      endsAt: row.ends_at.toISOString(),
+      consultant: chosen,
+      appointment: {
+        reference,
+        service: appt.service,
+        branch: { id: appt.branch_id, name: appt.branch_name, timezone: appt.timezone },
+        consultant: chosen,
+        clientEmail,
+        startsAt: row.starts_at.toISOString(),
+      },
+    };
   } catch (err) {
     if ((err as { code?: string }).code === EXCLUSION_VIOLATION) {
       if ((err as { constraint?: string }).constraint === CLIENT_OVERLAP_CONSTRAINT) {

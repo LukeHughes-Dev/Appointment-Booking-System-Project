@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ApiError, apiFetch } from '../api'
-import type { Appointment, Slot } from '../types'
+import type { Appointment, Confirmation, Slot } from '../types'
 
 interface Person {
   id: string
@@ -90,14 +90,12 @@ export function ReschedulePanel({ appointment, others, token, onMoved, onClose }
     setBusy(true)
     setError(null)
     try {
-      const moved = await apiFetch<{ startsAt: string; consultant: Person }>(`${base}/reschedule`, {
+      const moved = await apiFetch<{ confirmation: Confirmation }>(`${base}/reschedule`, {
         method: 'POST',
         token,
         body: { startsAt: start, ...(consultantId ? { consultantId } : {}) },
       })
-      onMoved(
-        `Appointment ${appointment.reference} is moved to ${describe(moved.startsAt, zone, true)} with ${moved.consultant.name}.`,
-      )
+      onMoved(`${moved.confirmation.message} A confirmation was sent to ${moved.confirmation.to} (simulated).`)
     } catch (e) {
       if (e instanceof ApiError && e.status === 409 && e.details.code === 'consultant_unavailable') {
         // Someone took it while the client was choosing: ask the same question again.
