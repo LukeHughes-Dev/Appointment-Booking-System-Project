@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Pool } from 'pg';
 import { requireRole, type createAuthenticate } from '../auth.js';
+import { breakDay, replaceBreakDay, type Piece } from '../breaks.js';
 import { windowState } from '../rules.js';
 
 interface StaffRoutesOptions {
@@ -201,6 +202,75 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
         entry.consultants.push({ consultant: { id: r.consultant_id, name: r.consultant_name }, ...counts });
       }
       return [...branches.values()];
+    },
+  );
+
+  // The consultant's lunch break on a day, and any of their appointments it overlaps.
+  const dateQuery = {
+    type: 'object',
+    required: ['date'],
+    properties: { date: { type: 'string', format: 'date' } },
+  } as const;
+
+  app.get<{ Querystring: { date: string } }>(
+    '/staff/breaks',
+    { preHandler: consultantOnly, schema: { querystring: dateQuery } },
+    async (request, reply) => {
+      const consultant = await consultantFor(request.user!.email);
+      if (!consultant) return reply.code(404).send({ error: 'No consultant record for this sign-in' });
+      const day = await breakDay(pool, consultant.id, request.query.date);
+      return day ?? reply.code(404).send({ error: 'You are not working at a branch on that day.' });
+    },
+  );
+
+  // Move or split the break on a day. The pieces replace the day's break; the total time must
+  // stay the same. Appointments already booked win: the change is saved and the clash is shown.
+  app.put<{ Querystring: { date: string }; Body: { breaks: Piece[] } }>(
+    '/staff/breaks',
+    {
+      preHandler: consultantOnly,
+      schema: {
+        querystring: dateQuery,
+        body: {
+          type: 'object',
+          required: ['breaks'],
+          additionalProperties: false,
+          properties: {
+            breaks: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 4,
+              items: {
+                type: 'object',
+                required: ['start', 'end'],
+                additionalProperties: false,
+                properties: { start: { type: 'string' }, end: { type: 'string' } },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const user = request.user!;
+      const consultant = await consultantFor(user.email);
+      if (!consultant) return reply.code(404).send({ error: 'No consultant record for this sign-in' });
+
+      const result = await replaceBreakDay(pool, consultant.id, request.query.date, request.body.breaks, user.email, now());
+      if (result.ok) return result.day;
+
+      switch (result.reason) {
+        case 'no_break':
+          return reply.code(404).send({ error: 'You have no break scheduled that day.' });
+        case 'past_day':
+          return reply.code(409).send({ error: 'A break can only be changed today or later.' });
+        case 'bad_total':
+          return reply.code(422).send({
+            error: 'Use the same total time as your scheduled break, in quarter-hour steps.',
+          });
+        case 'overlap':
+          return reply.code(422).send({ error: 'The break pieces cannot overlap each other.' });
+      }
     },
   );
 };
