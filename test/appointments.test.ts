@@ -45,6 +45,8 @@ describe('POST /appointments', () => {
     expect(body.endsAt).toBe('2026-12-02T09:00:00.000Z'); // Save takes 60 minutes
     expect(body.confirmation.message).toContain(body.reference);
     expect(body.confirmation.message).toContain('10:00');
+    expect(body.confirmation.message).toContain('chat with'); // and when the chat opens
+    expect(body.confirmation.message).toContain('from 09:55');
   });
 
   it('records the booking against the signed-in client, not anything in the body', async () => {

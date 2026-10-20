@@ -6,7 +6,7 @@ import { cancelAppointment } from '../cancellations.js';
 import { rescheduleAppointment } from '../reschedules.js';
 import { findNextSlots, findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from '../slots.js';
 import { sendConfirmation } from '../notifications.js';
-import { windowState } from '../rules.js';
+import { windowBounds, windowState } from '../rules.js';
 import { unreadMessagesSql } from '../messages.js';
 import { writeLimit } from '../limits.js';
 
@@ -92,6 +92,8 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       startsAt: r.starts_at.toISOString(),
       endsAt: r.ends_at.toISOString(),
       window: windowState(r.starts_at, now()),
+      chatOpensAt: windowBounds(r.starts_at).opensAt.toISOString(),
+      chatClosesAt: windowBounds(r.starts_at).closesAt.toISOString(),
       unreadMessages: r.unread_messages,
     }));
   });

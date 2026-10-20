@@ -13,6 +13,8 @@ const appointment = {
   startsAt: '2030-01-07T06:00:00.000Z',
   endsAt: '2030-01-07T07:00:00.000Z',
   window: 'upcoming' as const,
+  chatOpensAt: '2030-01-07T05:55:00.000Z',
+  chatClosesAt: '2030-01-07T06:05:00.000Z',
   unreadMessages: 0,
 }
 
@@ -73,6 +75,13 @@ describe('MyAppointments', () => {
     expect(await screen.findByText(/is cancelled\. Reference: APT-0123456789\. A confirmation was sent to client@example.com/)).toBeInTheDocument()
     expect(fetchMock.mock.calls[1][1].method).toBe('DELETE')
     expect(await screen.findByText(/no upcoming appointments/)).toBeInTheDocument()
+  })
+
+  it('tells the client when the chat will open, until it does', async () => {
+    fetchMock.mockResolvedValue(reply(200, [appointment, { ...appointment, reference: 'APT-0000000009', window: 'open' }]))
+    show(signedIn)
+    const notes = await screen.findAllByText(/You can chat with Nomsa from 07:55, 5 minutes before your appointment/)
+    expect(notes).toHaveLength(1) // not shown once the chat is open
   })
 
   it('shows the reason when a cancel is refused', async () => {

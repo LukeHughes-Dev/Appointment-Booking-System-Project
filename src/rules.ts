@@ -6,6 +6,14 @@
 export const WINDOW_MINUTES_BEFORE_START = 5;
 export const WINDOW_MINUTES_AFTER_START = 5;
 
+// When the window opens and closes for an appointment starting at `startsAt`.
+export function windowBounds(startsAt: Date): { opensAt: Date; closesAt: Date } {
+  return {
+    opensAt: new Date(startsAt.getTime() - WINDOW_MINUTES_BEFORE_START * 60_000),
+    closesAt: new Date(startsAt.getTime() + WINDOW_MINUTES_AFTER_START * 60_000),
+  };
+}
+
 export type WindowState = 'upcoming' | 'open' | 'closed';
 
 // Where "now" sits relative to an appointment's 10-minute window. The only place the

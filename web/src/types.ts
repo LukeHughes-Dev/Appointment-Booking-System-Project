@@ -53,6 +53,8 @@ export interface Appointment {
   startsAt: string
   endsAt: string
   window: WindowState
+  chatOpensAt: string // when the chat opens: 5 minutes before the start
+  chatClosesAt: string
   unreadMessages: number // messages from the consultant that this client has not read yet
 }
 
