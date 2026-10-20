@@ -51,6 +51,8 @@ a { color: var(--primary); }
 .who { color: #dbe7ee; }
 .site-header .button.quiet { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .site-header .button.quiet:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+.site-header .button:not(.quiet) { background: #fff; border-color: #fff; color: var(--primary); }
+.site-header .button:not(.quiet):hover:not(:disabled) { background: var(--primary-soft); }
 
 .lead { color: var(--muted); margin: 0 0 20px; }
 
