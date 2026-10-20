@@ -15,6 +15,12 @@ const booked = {
   confirmation: { to: 'client@example.com', message: 'Your Save appointment is booked. Reference: ABC123.' },
 }
 
+const services = [
+  { name: 'Save', minutes: 60 },
+  { name: 'Transact', minutes: 30 },
+  { name: 'Credit', minutes: 90 },
+]
+
 let fetchMock: ReturnType<typeof vi.fn>
 
 const reply = (status: number, body: unknown) => ({ ok: status < 400, status, statusText: '', json: async () => body })
@@ -36,6 +42,7 @@ function show(session: AuthState['session'], signIn = vi.fn()) {
 beforeEach(() => {
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return reply(201, booked)
+    if (url === '/api/services') return reply(200, services)
     if (url === '/api/appointments') return reply(200, [])
     return url.includes('/slots') ? reply(200, slots) : reply(200, branches)
   })
@@ -52,6 +59,7 @@ describe('BookingPage', () => {
 
   it('greys out times that overlap the client\'s own appointment', async () => {
     fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/services') return reply(200, services)
       if (url === '/api/appointments') {
         return reply(200, [{ reference: 'APT-1', startsAt: slots[0].startsAt, endsAt: '2030-01-07T06:30:00.000Z' }])
       }
@@ -80,6 +88,7 @@ describe('BookingPage', () => {
 
   it('says so when someone else took the slot', async () => {
     fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === '/api/services') return reply(200, services)
       if (init?.method === 'POST') return reply(409, { error: 'That slot was just taken. Please choose another time.' })
       return url.includes('/slots') ? reply(200, slots) : reply(200, branches)
     })
@@ -87,5 +96,11 @@ describe('BookingPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: '08:00' }))
     await userEvent.click(screen.getByRole('button', { name: 'Confirm booking' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('just taken'))
+  })
+
+  it('lists the services the API gives, with how long each takes', async () => {
+    show(null)
+    expect(await screen.findByRole('button', { name: 'Save (60 min)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Credit (90 min)' })).toBeInTheDocument()
   })
 })

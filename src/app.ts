@@ -4,6 +4,7 @@ import { createAuthenticate, type AuthConfig } from './auth.js';
 import { appointmentRoutes } from './routes/appointments.js';
 import { branchRoutes } from './routes/branches.js';
 import { meRoutes } from './routes/me.js';
+import { serviceRoutes } from './routes/services.js';
 import { slotRoutes } from './routes/slots.js';
 import { staffRoutes } from './routes/staff.js';
 import { messageRoutes } from './routes/messages.js';
@@ -32,6 +33,7 @@ export function buildApp({ pool, auth, logger = false, now = () => new Date() }:
   app.get('/health', async () => ({ status: 'ok' }));
   app.register(branchRoutes, { pool, now });
   app.register(meRoutes, { authenticate });
+  app.register(serviceRoutes, { pool });
   app.register(slotRoutes, { pool, now });
   app.register(appointmentRoutes, { pool, now, authenticate });
   app.register(staffRoutes, { pool, now, authenticate });
