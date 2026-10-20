@@ -136,6 +136,16 @@ safely in a JSON number). Dates and times are always stored in UTC and shown in 
 
 ## API
 
+An OpenAPI description is generated from the routes' own schemas and has a browsable page at
+**http://localhost:3000/docs** (the raw document is at `/docs/json`). Requests that need sign-in are
+marked with the Bearer token scheme.
+
+Safe response headers are set by `@fastify/helmet`. Requests are limited per address (300 a minute,
+`RATE_LIMIT_PER_MINUTE`), and requests that change something (book, move, cancel, chat, edit lunch,
+record an outcome) are limited to 20 a minute. The health check is never limited. Behind nginx the
+API reads the client's real address (`TRUST_PROXY=true`), so one busy client cannot lock out the rest.
+There is no CORS set-up because the web app and the API share one address (the proxy).
+
 | Method and path | Who | What |
 | --- | --- | --- |
 | `GET /health` | anyone | liveness |
@@ -158,7 +168,8 @@ safely in a JSON number). Dates and times are always stored in UTC and shown in 
 
 - **"Any consultant"** picks the free consultant with the fewest appointments that day, then the
   first alphabetically, so work is spread evenly. It does not weigh how long the appointments are.
-- **Not built yet:** rate limiting and an OpenAPI description.
+- **Rate limits are kept in the API's memory.** That is right for one API instance. With several
+  instances behind a load balancer the counts would need a shared store such as Redis.
 - **Walk-in rule (considered, not built).** Walk-ins are helped by consultants too. A consultant
   should not be called to a walk-in in the 5 minutes before one of their appointments starts. In
   code this would be one pure function, `isConsultantReserved(consultant, now)`, used by a walk-in

@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { requireRole, type createAuthenticate } from '../auth.js';
 import { breakDay, replaceBreakDay, type Piece } from '../breaks.js';
 import { windowState } from '../rules.js';
+import { writeLimit } from '../limits.js';
 
 interface StaffRoutesOptions {
   pool: Pool;
@@ -81,6 +82,7 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
     '/staff/appointments/:reference/outcome',
     {
       preHandler: consultantOnly,
+      config: { rateLimit: writeLimit },
       schema: {
         params: {
           type: 'object',
@@ -229,6 +231,7 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
     '/staff/breaks',
     {
       preHandler: consultantOnly,
+      config: { rateLimit: writeLimit },
       schema: {
         querystring: dateQuery,
         body: {

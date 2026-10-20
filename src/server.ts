@@ -28,6 +28,10 @@ const app = buildApp({
   pool,
   auth: { issuer, audience, getKey: createRemoteJWKSet(new URL(jwksUri)) },
   logger: true,
+  // Requests per minute per address, across everything except /health. Writes are limited further.
+  rateLimit: { max: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 300) },
+  // True behind a proxy such as nginx, so limits apply to the real client and not the proxy.
+  trustProxy: process.env.TRUST_PROXY === 'true',
 });
 
 // Copy the next four weeks of breaks from the scheduling feed now and then every hour, so

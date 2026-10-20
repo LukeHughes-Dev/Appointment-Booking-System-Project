@@ -7,6 +7,7 @@ import { rescheduleAppointment } from '../reschedules.js';
 import { findNextSlots, findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from '../slots.js';
 import { sendConfirmation } from '../notifications.js';
 import { windowState } from '../rules.js';
+import { writeLimit } from '../limits.js';
 
 interface AppointmentRoutesOptions {
   pool: Pool;
@@ -22,6 +23,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
     '/appointments',
     {
       preHandler: authenticate,
+      config: { rateLimit: writeLimit },
       schema: {
         body: {
           type: 'object',
@@ -96,6 +98,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
     '/appointments/:reference',
     {
       preHandler: authenticate,
+      config: { rateLimit: writeLimit },
       schema: {
         params: {
           type: 'object',
@@ -206,6 +209,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
     '/appointments/:reference/reschedule',
     {
       preHandler: authenticate,
+      config: { rateLimit: writeLimit },
       schema: {
         params: {
           type: 'object',
