@@ -55,6 +55,7 @@ services:
       OIDC_ISSUER: http://localhost:8080/realms/booking
       OIDC_JWKS_URI: http://keycloak:8080/realms/booking/protocol/openid-connect/certs
       OIDC_AUDIENCE: booking-api
+      TRUST_PROXY: "true" # nginx sits in front, so use the address it forwards
     ports:
       - "3000:3000"
 

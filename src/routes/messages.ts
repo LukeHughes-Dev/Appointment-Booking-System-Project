@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { Pool } from 'pg';
 import { requireRole, type createAuthenticate } from '../auth.js';
 import { listMessages, sendMessage, type Party } from '../messages.js';
+import { writeLimit } from '../limits.js';
 
 interface MessageRoutesOptions {
   pool: Pool;
@@ -51,7 +52,7 @@ export const messageRoutes: FastifyPluginAsync<MessageRoutesOptions> = async (
       return messages ?? notFound(reply);
     });
 
-    app.post<Req>(path, { preHandler, schema: { params, body } }, async (request, reply) => {
+    app.post<Req>(path, { preHandler, config: { rateLimit: writeLimit }, schema: { params, body } }, async (request, reply) => {
       const who = await whoFor(request.user!);
       if (!who) return reply.code(404).send({ error: 'No consultant record for this sign-in' });
       const result = await sendMessage(pool, request.params.reference, who, request.body.body, now());

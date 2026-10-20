@@ -1,6 +1,6 @@
 import { generateKeyPair, SignJWT } from 'jose';
 import type { Pool } from 'pg';
-import { buildApp } from '../src/app.js';
+import { buildApp, type AppOptions } from '../src/app.js';
 import { createPool } from '../src/db.js';
 
 // Same defaults as docker-compose.yml, so tests run after `docker compose up -d`.
@@ -13,8 +13,9 @@ export const TEST_AUDIENCE = 'booking-api';
 const { publicKey, privateKey } = await generateKeyPair('ES256');
 const otherKeys = await generateKeyPair('ES256'); // a key the app does not trust
 
-export function buildTestApp(now?: () => Date) {
+export function buildTestApp(now?: () => Date, extra: Partial<Pick<AppOptions, 'rateLimit'>> = {}) {
   return buildApp({
+    ...extra,
     pool: createPool(databaseUrl),
     auth: { issuer: TEST_ISSUER, audience: TEST_AUDIENCE, getKey: async () => publicKey },
     now,
