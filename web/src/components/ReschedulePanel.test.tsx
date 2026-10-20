@@ -120,4 +120,15 @@ describe('ReschedulePanel', () => {
     show([{ ...appointment, reference: 'APT-0000000002', startsAt: '2030-01-07T11:00:00.000Z', endsAt: '2030-01-07T12:00:00.000Z' }])
     expect(await screen.findByRole('button', { name: '13:00' })).toBeDisabled()
   })
+
+  it('marks the time the client already holds as their appointment and does not let it be chosen', async () => {
+    api({
+      'GET /slots': () => reply(200, [slot('2030-01-07T08:00:00.000Z', [NOMSA]), slot('2030-01-07T11:00:00.000Z', [NOMSA])]),
+    })
+    show()
+    const own = await screen.findByRole('button', { name: /10:00/ })
+    expect(own).toBeDisabled()
+    expect(own).toHaveTextContent('Your appointment')
+    expect(screen.getByRole('button', { name: '13:00' })).toBeEnabled()
+  })
 })
