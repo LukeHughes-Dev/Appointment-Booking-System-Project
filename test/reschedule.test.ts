@@ -132,16 +132,49 @@ describe('POST /appointments/:reference/reschedule', () => {
   });
 });
 
-describe('GET /branches/:id/next-available', () => {
-  async function next(query: string) {
-    return app.inject({ method: 'GET', url: `/branches/${MENLYN}/next-available?service=Save&${query}` });
+describe('choosing a new time', () => {
+  async function get(url: string, client = clientA) {
+    return app.inject({ method: 'GET', url, headers: { authorization: `Bearer ${await tokenFor(client)}` } });
   }
+
+  it('lets a client move part-way into their own slot, because their own time does not block them', async () => {
+    const booking = await bookAs(clientA, TEN_AM); // 10:00-11:00
+    const res = await reschedule(booking.reference, { startsAt: '2026-12-16T08:45:00Z' }); // 10:45
+    expect(res.statusCode).toBe(200);
+    expect(res.json().startsAt).toBe('2026-12-16T08:45:00.000Z');
+    expect(res.json().consultant.id).toBe(booking.consultant.id);
+  });
+
+  it('still refuses part-way moves when someone else holds that part of the time', async () => {
+    const booking = await bookAs(clientA, TEN_AM);
+    await bookAs(clientB, ONE_PM, { consultantId: booking.consultant.id }); // 13:00-14:00
+    const res = await reschedule(booking.reference, { startsAt: '2026-12-16T10:45:00Z' }); // 12:45-13:45
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe('consultant_unavailable');
+  });
+
+  it('shows the client\'s own time as free in the picker, but not to others', async () => {
+    const booking = await bookAs(clientA, TEN_AM);
+    const url = `/appointments/${booking.reference}/slots?date=2026-12-16`;
+    const mine = (await get(url)).json() as { startsAt: string; consultants: { id: string }[] }[];
+    const at1045 = mine.find((s) => s.startsAt === '2026-12-16T08:45:00.000Z');
+    expect(at1045?.consultants.map((c) => c.id)).toContain(booking.consultant.id);
+
+    const publicList = (
+      await app.inject({ method: 'GET', url: `/branches/${MENLYN}/slots?date=2026-12-16&service=Save` })
+    ).json() as typeof mine;
+    const publicAt1045 = publicList.find((s) => s.startsAt === '2026-12-16T08:45:00.000Z');
+    expect(publicAt1045?.consultants.map((c) => c.id) ?? []).not.toContain(booking.consultant.id);
+
+    expect((await get(url, clientB)).statusCode).toBe(404);
+  });
 
   it('lists the consultant\'s next free times, soonest first, across days', async () => {
     const booking = await bookAs(clientA, TEN_AM);
     const consultantId = booking.consultant.id;
-
-    const res = await next(`consultantId=${consultantId}&after=2026-12-16T14:00:00Z`);
+    const res = await get(
+      `/appointments/${booking.reference}/next-available?consultantId=${consultantId}&after=2026-12-16T14:00:00Z`,
+    );
     const slots = res.json() as { startsAt: string; consultants: { id: string }[] }[];
     expect(res.statusCode).toBe(200);
     expect(slots).toHaveLength(5);
@@ -150,16 +183,14 @@ describe('GET /branches/:id/next-available', () => {
     expect(new Date(slots[0]!.startsAt).getTime()).toBeGreaterThan(new Date('2026-12-16T14:00:00Z').getTime());
   });
 
-  it('leaves out times the consultant is busy', async () => {
-    const booking = await bookAs(clientA, ONE_PM);
-    const res = await next(`consultantId=${booking.consultant.id}&after=2026-12-16T10:00:00Z`);
-    const starts = (res.json() as { startsAt: string }[]).map((s) => s.startsAt);
+  it('leaves out times the consultant is busy, and checks its input', async () => {
+    const booking = await bookAs(clientA, TEN_AM);
+    await bookAs(clientB, ONE_PM, { consultantId: booking.consultant.id });
+    const base = `/appointments/${booking.reference}/next-available?consultantId=${booking.consultant.id}`;
+    const starts = ((await get(`${base}&after=2026-12-16T10:00:00Z`)).json() as { startsAt: string }[]).map((s) => s.startsAt);
     expect(starts).not.toContain('2026-12-16T11:00:00.000Z');
     expect(starts).not.toContain('2026-12-16T11:15:00.000Z');
-  });
-
-  it('checks its input', async () => {
-    expect((await next('consultantId=abc')).statusCode).toBe(400);
-    expect((await app.inject({ method: 'GET', url: '/branches/999/next-available?service=Save&consultantId=1' })).statusCode).toBe(404);
+    expect((await get(`/appointments/${booking.reference}/next-available?consultantId=abc`)).statusCode).toBe(400);
+    expect((await get(base, clientB)).statusCode).toBe(404);
   });
 });

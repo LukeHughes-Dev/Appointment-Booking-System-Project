@@ -4,6 +4,7 @@ import type { createAuthenticate } from '../auth.js';
 import { createBooking, type BookingRequest } from '../bookings.js';
 import { cancelAppointment } from '../cancellations.js';
 import { rescheduleAppointment } from '../reschedules.js';
+import { findNextSlots, findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from '../slots.js';
 import { sendConfirmation } from '../notifications.js';
 import { windowState } from '../rules.js';
 
@@ -118,6 +119,81 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
             .code(409)
             .send({ error: 'This appointment has already started and can no longer be cancelled.' });
       }
+    },
+  );
+
+  // What a client sees while choosing a new time: the same slots as booking, except that
+  // the appointment being moved does not block itself. Owner only.
+  async function ownAppointment(reference: string, clientId: string) {
+    const { rows } = await pool.query(
+      `SELECT a.branch_id::text, s.name AS service FROM appointments a
+       JOIN service_types s ON s.id = a.service_type_id
+       WHERE a.reference = $1 AND a.client_id = $2 AND a.status = 'booked'`,
+      [reference, clientId],
+    );
+    return rows[0] as { branch_id: string; service: string } | undefined;
+  }
+  const referenceParams = {
+    type: 'object',
+    required: ['reference'],
+    properties: { reference: { type: 'string', pattern: '^APT-[0-9A-F]{10}$' } },
+  } as const;
+
+  app.get<{ Params: { reference: string }; Querystring: { date: string } }>(
+    '/appointments/:reference/slots',
+    {
+      preHandler: authenticate,
+      schema: {
+        params: referenceParams,
+        querystring: { type: 'object', required: ['date'], properties: { date: { type: 'string', format: 'date' } } },
+      },
+    },
+    async (request, reply) => {
+      const appt = await ownAppointment(request.params.reference, request.user!.sub);
+      if (!appt) return reply.code(404).send({ error: 'We could not find that appointment.' });
+      return findSlots(pool, {
+        branchId: appt.branch_id,
+        date: request.query.date,
+        service: appt.service,
+        now: now(),
+        gridMinutes: SLOT_GRID_MINUTES,
+        noticeMinutes: MIN_NOTICE_MINUTES,
+        ignoreReference: request.params.reference,
+      });
+    },
+  );
+
+  // A consultant's next free times after a moment, on any day: offered when the time the
+  // client chose does not suit their consultant. Owner only.
+  app.get<{ Params: { reference: string }; Querystring: { consultantId: string; after?: string } }>(
+    '/appointments/:reference/next-available',
+    {
+      preHandler: authenticate,
+      schema: {
+        params: referenceParams,
+        querystring: {
+          type: 'object',
+          required: ['consultantId'],
+          properties: {
+            consultantId: { type: 'string', pattern: '^[0-9]+$' },
+            after: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const appt = await ownAppointment(request.params.reference, request.user!.sub);
+      if (!appt) return reply.code(404).send({ error: 'We could not find that appointment.' });
+      return findNextSlots(pool, {
+        branchId: appt.branch_id,
+        service: appt.service,
+        consultantId: request.query.consultantId,
+        after: request.query.after ? new Date(request.query.after) : now(),
+        now: now(),
+        limit: 5,
+        days: 14,
+        ignoreReference: request.params.reference,
+      });
     },
   );
 
