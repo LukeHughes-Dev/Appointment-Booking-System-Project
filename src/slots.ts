@@ -20,7 +20,8 @@ export interface Slot {
   consultants: { id: string; name: string }[];
 }
 
-// Every start time on the grid between opening and (closing - service duration),
+// Every start time on the grid between opening and (closing - service duration), where closing
+// includes any month-end extension,
 // each with the consultants who are free for the whole slot (not booked, not on a break). Closed days (closures,
 // or no trading hours that weekday) give no rows. Slots earlier than now + notice
 // are dropped. Times are worked out in the branch's own timezone.
@@ -33,7 +34,17 @@ const SLOTS_SQL = `
     WHERE b.id = $1
   ),
   trading AS (
-    SELECT p.*, h.opens_at, h.closes_at
+    SELECT p.*, h.opens_at,
+           -- Month-end extensions (trading_extensions) can only make the branch close later.
+           greatest(h.closes_at, coalesce((
+             SELECT max(e.closes_at) FROM trading_extensions e
+             WHERE (e.branch_id IS NULL OR e.branch_id = p.branch_id)
+               AND p.weekday BETWEEN e.weekday_from AND e.weekday_to
+               AND CASE WHEN e.from_day <= e.to_day
+                        THEN extract(day FROM p.day) BETWEEN e.from_day AND e.to_day
+                        ELSE extract(day FROM p.day) >= e.from_day OR extract(day FROM p.day) <= e.to_day
+                   END
+           ), h.closes_at)) AS closes_at
     FROM params p
     JOIN branch_hours h ON h.branch_id = p.branch_id AND h.weekday = p.weekday
     WHERE NOT EXISTS (
