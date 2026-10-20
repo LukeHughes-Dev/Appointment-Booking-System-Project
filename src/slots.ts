@@ -21,7 +21,7 @@ export interface Slot {
 }
 
 // Every start time on the grid between opening and (closing - service duration),
-// each with the consultants who are free for the whole slot. Closed days (closures,
+// each with the consultants who are free for the whole slot (not booked, not on a break). Closed days (closures,
 // or no trading hours that weekday) give no rows. Slots earlier than now + notice
 // are dropped. Times are worked out in the branch's own timezone.
 const SLOTS_SQL = `
@@ -67,6 +67,10 @@ const SLOTS_SQL = `
            '[]') AS free_consultants
   FROM slots sl
   LEFT JOIN staff st ON NOT EXISTS (
+    SELECT 1 FROM consultant_breaks br
+    WHERE br.consultant_id = st.consultant_id
+      AND tstzrange(br.starts_at, br.ends_at, '[)') && tstzrange(sl.starts_at, sl.ends_at, '[)')
+  ) AND NOT EXISTS (
     SELECT 1 FROM appointments ap
     WHERE ap.consultant_id = st.consultant_id
       AND ap.status = 'booked'
