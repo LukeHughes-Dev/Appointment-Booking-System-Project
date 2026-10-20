@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=.env dist/server.js",
     "test": "vitest run",
-    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts"
+    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
+    "demo:live": "tsx --env-file-if-exists=.env scripts/demo-live.ts"
   },
   "engines": {
     "node": ">=24"
