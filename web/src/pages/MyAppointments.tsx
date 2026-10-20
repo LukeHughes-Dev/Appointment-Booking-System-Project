@@ -38,8 +38,11 @@ export function MyAppointments() {
     if (!token) return
     const controller = new AbortController()
     const start = setTimeout(() => void load(controller.signal), 0)
+    // Refresh now and then, so the window buttons appear and disappear on time.
+    const refresh = setInterval(() => void load(controller.signal), 30_000)
     return () => {
       clearTimeout(start)
+      clearInterval(refresh)
       controller.abort()
     }
   }, [token, load])
@@ -54,6 +57,30 @@ export function MyAppointments() {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
     }
     setConfirming(null)
+    await load()
+  }
+
+  async function reschedule(reference: string) {
+    setMessage(null)
+    setError(null)
+    try {
+      const moved = await apiFetch<{ startsAt: string }>(`/appointments/${reference}/reschedule`, {
+        method: 'POST',
+        token,
+      })
+      const when = items?.find((a) => a.reference === reference)
+      const text = new Intl.DateTimeFormat('en-GB', {
+        timeZone: when?.branch.timezone,
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(moved.startsAt))
+      setMessage(`Appointment ${reference} is moved to ${text}.`)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
+    }
     await load()
   }
 
@@ -93,6 +120,11 @@ export function MyAppointments() {
               <span>Reference: {a.reference}</span>
             </div>
             <div className="card-actions">
+              {a.window === 'open' && confirming !== a.reference && (
+                <button type="button" className="button" onClick={() => void reschedule(a.reference)}>
+                  Move to next available
+                </button>
+              )}
               {confirming === a.reference ? (
                 <>
                   <button type="button" className="button danger" onClick={() => void cancel(a.reference)}>

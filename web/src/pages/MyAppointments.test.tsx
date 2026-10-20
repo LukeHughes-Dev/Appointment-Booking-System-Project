@@ -12,6 +12,7 @@ const appointment = {
   service: 'Save',
   startsAt: '2030-01-07T06:00:00.000Z',
   endsAt: '2030-01-07T07:00:00.000Z',
+  window: 'upcoming' as const,
 }
 
 let fetchMock: ReturnType<typeof vi.fn>
@@ -78,5 +79,35 @@ describe('MyAppointments', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Cancel appointment' }))
     await userEvent.click(screen.getByRole('button', { name: 'Yes, cancel it' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('already cancelled')
+  })
+
+  it('offers one-click reschedule only while the window is open', async () => {
+    fetchMock.mockResolvedValue(reply(200, [appointment]))
+    show(signedIn)
+    await screen.findByText('Save at Pretoria Menlyn')
+    expect(screen.queryByRole('button', { name: 'Move to next available' })).not.toBeInTheDocument()
+  })
+
+  it('moves the appointment in one click and shows the new time', async () => {
+    fetchMock
+      .mockResolvedValueOnce(reply(200, [{ ...appointment, window: 'open' }]))
+      .mockResolvedValueOnce(reply(200, { reference: appointment.reference, startsAt: '2030-01-07T07:00:00.000Z' }))
+      .mockResolvedValueOnce(reply(200, [{ ...appointment, startsAt: '2030-01-07T07:00:00.000Z', window: 'upcoming' }]))
+    show(signedIn)
+    await userEvent.click(await screen.findByRole('button', { name: 'Move to next available' }))
+    expect(await screen.findByText(/is moved to .*09:00/)).toBeInTheDocument()
+    expect(fetchMock.mock.calls[1][0]).toContain('/appointments/APT-0123456789/reschedule')
+    expect(fetchMock.mock.calls[1][1].method).toBe('POST')
+    expect(screen.queryByRole('button', { name: 'Move to next available' })).not.toBeInTheDocument()
+  })
+
+  it('shows the reason when a reschedule is refused', async () => {
+    fetchMock
+      .mockResolvedValueOnce(reply(200, [{ ...appointment, window: 'open' }]))
+      .mockResolvedValueOnce(reply(409, { error: 'Your consultant has no free time in the next two weeks. Please book again.' }))
+      .mockResolvedValueOnce(reply(200, [{ ...appointment, window: 'open' }]))
+    show(signedIn)
+    await userEvent.click(await screen.findByRole('button', { name: 'Move to next available' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('no free time')
   })
 })

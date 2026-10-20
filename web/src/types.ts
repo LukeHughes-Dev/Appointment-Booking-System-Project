@@ -31,6 +31,9 @@ export interface Booking {
   confirmation: { to: string; message: string }
 }
 
+// Where "now" sits relative to the 10-minute window around the start (see src/rules.ts).
+export type WindowState = 'upcoming' | 'open' | 'closed'
+
 export interface Appointment {
   reference: string
   branch: { id: string; name: string; timezone: string }
@@ -38,6 +41,7 @@ export interface Appointment {
   service: string
   startsAt: string
   endsAt: string
+  window: WindowState
 }
 
 export type Outcome = 'attended' | 'no_show' | null
@@ -51,6 +55,7 @@ export interface StaffAppointment {
   service: string
   startsAt: string
   endsAt: string
+  window: WindowState
 }
 
 export interface Counts {
