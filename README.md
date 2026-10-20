@@ -140,6 +140,7 @@ safely in a JSON number). Dates and times are always stored in UTC and shown in 
 | --- | --- | --- |
 | `GET /health` | anyone | liveness |
 | `GET /branches` | anyone | branches, with distance if a location is given |
+| `GET /services` | anyone | what can be booked, and how long each takes |
 | `GET /branches/:id/slots?date&service` | anyone | free times, with who is free |
 | `POST /appointments` | client | book (a specific consultant, or any) |
 | `GET /appointments` | client | my upcoming appointments, with their window state |
@@ -157,8 +158,6 @@ safely in a JSON number). Dates and times are always stored in UTC and shown in 
 
 - **"Any consultant"** picks the free consultant with the fewest appointments that day, then the
   first alphabetically, so work is spread evenly. It does not weigh how long the appointments are.
-- **Services** (Save, Transact, Credit) are also listed in the web app; loading them from the API is
-  planned.
 - **Not built yet:** rate limiting and an OpenAPI description.
 - **Walk-in rule (considered, not built).** Walk-ins are helped by consultants too. A consultant
   should not be called to a walk-in in the 5 minutes before one of their appointments starts. In

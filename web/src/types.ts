@@ -14,6 +14,11 @@ export interface Branch {
   closure: Closure | null // set while the branch is closed today
 }
 
+export interface Service {
+  name: string
+  minutes: number
+}
+
 export interface Slot {
   startsAt: string
   endsAt: string

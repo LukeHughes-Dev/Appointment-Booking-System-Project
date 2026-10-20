@@ -2,17 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
-import type { Booking, Branch, Slot } from '../types'
+import type { Booking, Branch, Service, Slot } from '../types'
 
 // Only the times are needed here.
 type Busy = { startsAt: string; endsAt: string }
-
-// Matches the seeded services. A later step can load these from the API.
-const SERVICES = [
-  { name: 'Save', minutes: 60 },
-  { name: 'Transact', minutes: 30 },
-  { name: 'Credit', minutes: 90 },
-]
 
 const today = () => new Date().toLocaleDateString('en-CA')
 
@@ -32,6 +25,7 @@ export function BookingPage() {
   const consultant = params.get('consultant') ?? ''
 
   const [branch, setBranch] = useState<Branch | null>(null)
+  const [services, setServices] = useState<Service[] | null>(null)
   const [slots, setSlots] = useState<Slot[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [booking, setBooking] = useState<Booking | null>(null)
@@ -55,6 +49,16 @@ export function BookingPage() {
       .catch(() => {})
     return () => controller.abort()
   }, [id])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    apiFetch<Service[]>('/services', { signal: controller.signal })
+      .then(setServices)
+      .catch(() => {
+        if (!controller.signal.aborted) setError('We could not load the services. Please try again.')
+      })
+    return () => controller.abort()
+  }, [])
 
   // The client's own upcoming appointments, so overlapping times can be greyed out.
   useEffect(() => {
@@ -131,8 +135,9 @@ export function BookingPage() {
 
       <section className="step" aria-labelledby="step-service">
         <h2 id="step-service">1. What do you need?</h2>
+        {services === null && !error && <p>Loading…</p>}
         <div className="choices">
-          {SERVICES.map((s) => (
+          {services?.map((s) => (
             <button
               key={s.name}
               type="button"
