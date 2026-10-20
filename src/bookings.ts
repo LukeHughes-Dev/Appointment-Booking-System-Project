@@ -79,9 +79,26 @@ export async function createBooking(
   const slot = slots.find((s) => s.startsAt === startsAt);
   if (!slot) return { ok: false, reason: 'not_a_slot' };
 
-  const candidates = req.consultantId
+  // A named consultant is the only candidate. For "any consultant", the free consultants are
+  // tried least busy first, so work is spread evenly: fewest booked appointments that day
+  // (at this branch's local date), then alphabetical so the choice is predictable.
+  let candidates = req.consultantId
     ? slot.consultants.filter((c) => c.id === req.consultantId)
     : slot.consultants;
+  if (!req.consultantId && candidates.length > 1) {
+    const load = await pool.query(
+      `SELECT consultant_id::text AS id, count(*)::int AS booked
+       FROM appointments
+       WHERE status = 'booked' AND consultant_id = ANY($1::bigint[])
+         AND (starts_at AT TIME ZONE $2)::date = $3::date
+       GROUP BY consultant_id`,
+      [candidates.map((c) => c.id), branch.timezone, branch.day],
+    );
+    const booked = new Map<string, number>(load.rows.map((r) => [r.id, r.booked]));
+    candidates = [...candidates].sort(
+      (a, b) => (booked.get(a.id) ?? 0) - (booked.get(b.id) ?? 0) || a.name.localeCompare(b.name),
+    );
+  }
 
   // The check above only tells us who looked free a moment ago. The real guarantee is
   // the database exclusion constraint: if someone else got there first, the insert is
