@@ -117,3 +117,8 @@ a { color: var(--primary); }
 .reschedule { flex: 1 1 100%; display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
 .reschedule h3 { margin: 0; }
 .reschedule .notice p { margin: 0 0 8px; }
+
+.lunch { margin-bottom: 12px; }
+.lunch-row { display: flex; gap: 8px; align-items: center; }
+.lunch-row input { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.lunch-bad { color: var(--error-text); }

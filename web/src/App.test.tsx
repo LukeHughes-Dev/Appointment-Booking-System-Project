@@ -22,7 +22,15 @@ function show(session: AuthState['session'], path = '/') {
 
 beforeEach(() => {
   localStorage.clear()
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, statusText: '', json: async () => [] })))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      // No lunch break on this day; everything else is an empty list.
+      String(url).includes('/staff/breaks')
+        ? { ok: false, status: 404, statusText: '', json: async () => ({ error: 'none' }) }
+        : { ok: true, status: 200, statusText: '', json: async () => [] },
+    ),
+  )
 })
 afterEach(() => vi.unstubAllGlobals())
 

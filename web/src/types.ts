@@ -84,3 +84,16 @@ export interface ChatMessage {
   body: string
   sentAt: string
 }
+
+export interface BreakPiece {
+  start: string // HH:MM, the branch's local time
+  end: string
+}
+
+export interface BreakDay {
+  date: string
+  timezone: string
+  totalMinutes: number
+  breaks: (BreakPiece & { source: 'scheduled' | 'edited' })[]
+  clashes: { reference: string; service: string; startsAt: string; endsAt: string }[]
+}
