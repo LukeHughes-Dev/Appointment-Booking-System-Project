@@ -141,6 +141,9 @@ limits the data in SQL (for example a branch manager's summary is limited to the
 **Testable time.** The API takes its clock as a parameter, so tests fix "now" and check the window
 edges and notice rules exactly.
 
+**Colours are variables.** The whole look comes from the colour variables at the top of `web/src/index.css`
+(a blue header with a red edge for clients, a darker one for staff), so changing the brand is one block of CSS.
+
 **Small choices worth knowing.** Database ids are returned as strings (PostgreSQL `bigint` does not fit
 safely in a JSON number). Dates and times are always stored in UTC and shown in the branch's time zone.
 
