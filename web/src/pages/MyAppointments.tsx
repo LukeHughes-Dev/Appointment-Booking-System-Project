@@ -17,6 +17,10 @@ function formatWhen(a: Appointment) {
   }).format(new Date(a.startsAt))
 }
 
+function formatClock(iso: string, timezone: string) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+}
+
 export function MyAppointments() {
   const { session, loading, signIn } = useAuth()
   const token = session?.accessToken
@@ -101,6 +105,12 @@ export function MyAppointments() {
               <strong>{a.service} at {a.branch.name}</strong>
               <span>{formatWhen(a)} with {a.consultant.name}</span>
               <span>Reference: {a.reference}</span>
+              {a.window === 'upcoming' && (
+                <span className="chat-note">
+                  You can chat with {a.consultant.name} from {formatClock(a.chatOpensAt, a.branch.timezone)}, 5 minutes
+                  before your appointment.
+                </span>
+              )}
             </div>
             <div className="card-actions">
               {a.window === 'open' && confirming !== a.reference && (

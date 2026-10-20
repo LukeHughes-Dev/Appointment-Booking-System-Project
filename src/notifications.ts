@@ -1,5 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { Booking } from './bookings.js';
+import { WINDOW_MINUTES_BEFORE_START, windowBounds } from './rules.js';
 
 export interface Confirmation {
   channel: 'email';
@@ -33,10 +34,20 @@ export function sendConfirmation(
     minute: '2-digit',
   }).format(new Date(appointment.startsAt));
 
+  const clock = new Intl.DateTimeFormat('en-GB', {
+    timeZone: appointment.branch.timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const { opensAt, closesAt } = windowBounds(new Date(appointment.startsAt));
+  const chat =
+    ` You can chat with ${appointment.consultant.name} from ${clock.format(opensAt)}, ` +
+    `${WINDOW_MINUTES_BEFORE_START} minutes before your appointment, until ${clock.format(closesAt)}.`;
+
   const what = `Your ${appointment.service} appointment at ${appointment.branch.name} with ${appointment.consultant.name}`;
   const text = {
-    booked: `${what} is booked for ${when}.`,
-    moved: `${what} has moved to ${when}.`,
+    booked: `${what} is booked for ${when}.${chat}`,
+    moved: `${what} has moved to ${when}.${chat}`,
     cancelled: `${what} on ${when} is cancelled.`,
   }[kind];
 
