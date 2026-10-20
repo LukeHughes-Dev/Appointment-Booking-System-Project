@@ -53,6 +53,7 @@ export async function rescheduleAppointment(
     now,
     gridMinutes: SLOT_GRID_MINUTES,
     noticeMinutes: MIN_NOTICE_MINUTES,
+    ignoreReference: reference, // the time being given up is free to take
   });
   const slot = slots.find((s) => s.startsAt === startsAt);
   if (!slot) return { ok: false, reason: 'not_a_slot' };

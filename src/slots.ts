@@ -10,6 +10,7 @@ export interface SlotQuery {
   now: Date;
   gridMinutes: number;
   noticeMinutes: number;
+  ignoreReference?: string; // an appointment being moved: its own time does not block anyone
 }
 
 export interface Slot {
@@ -69,6 +70,7 @@ const SLOTS_SQL = `
     SELECT 1 FROM appointments ap
     WHERE ap.consultant_id = st.consultant_id
       AND ap.status = 'booked'
+      AND ($7::text IS NULL OR ap.reference <> $7)
       AND tstzrange(ap.starts_at, ap.ends_at, '[)') && tstzrange(sl.starts_at, sl.ends_at, '[)')
   )
   GROUP BY sl.starts_at, sl.ends_at
@@ -83,6 +85,7 @@ export async function findSlots(pool: Pool, q: SlotQuery): Promise<Slot[]> {
     q.now.toISOString(),
     q.gridMinutes,
     q.noticeMinutes,
+    q.ignoreReference ?? null,
   ]);
   return rows.map((r) => ({
     startsAt: r.starts_at.toISOString(),
@@ -100,6 +103,7 @@ export interface NextSlotsQuery {
   now: Date;
   limit: number;
   days: number; // how many days ahead to look
+  ignoreReference?: string;
 }
 
 // The next times a particular consultant is free, soonest first, across as many days as
@@ -122,6 +126,7 @@ export async function findNextSlots(pool: Pool, q: NextSlotsQuery): Promise<Slot
       now: q.now,
       gridMinutes: SLOT_GRID_MINUTES,
       noticeMinutes: MIN_NOTICE_MINUTES,
+      ignoreReference: q.ignoreReference,
     });
     for (const slot of slots) {
       if (new Date(slot.startsAt) <= q.after) continue;
