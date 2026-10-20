@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import type { createAuthenticate } from '../auth.js';
 import { createBooking, type BookingRequest } from '../bookings.js';
 import { cancelAppointment } from '../cancellations.js';
+import { rescheduleAppointment } from '../reschedules.js';
 import { sendConfirmation } from '../notifications.js';
 import { windowState } from '../rules.js';
 
@@ -116,6 +117,41 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
           return reply
             .code(409)
             .send({ error: 'This appointment has already started and can no longer be cancelled.' });
+      }
+    },
+  );
+
+  // One click: move to the same consultant's next free slot.
+  app.post<{ Params: { reference: string } }>(
+    '/appointments/:reference/reschedule',
+    {
+      preHandler: authenticate,
+      schema: {
+        params: {
+          type: 'object',
+          required: ['reference'],
+          properties: { reference: { type: 'string', pattern: '^APT-[0-9A-F]{10}$' } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await rescheduleAppointment(pool, request.params.reference, request.user!.sub, now());
+
+      if (result.ok) return result;
+
+      switch (result.reason) {
+        case 'not_found':
+          return reply.code(404).send({ error: 'We could not find that appointment.' });
+        case 'not_booked':
+          return reply.code(409).send({ error: 'This appointment is no longer booked.' });
+        case 'already_over':
+          return reply
+            .code(409)
+            .send({ error: 'This appointment has already started and can no longer be moved.' });
+        case 'no_availability':
+          return reply
+            .code(409)
+            .send({ error: 'Your consultant has no free time in the next two weeks. Please book again.' });
       }
     },
   );
