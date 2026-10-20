@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { Chat } from '../components/Chat'
+import { LunchBreak } from '../components/LunchBreak'
 import type { Outcome, StaffAppointment } from '../types'
 
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -86,6 +87,8 @@ export function StaffDay() {
           dates
         </label>
       </div>
+
+      {!all && <LunchBreak date={date} token={token} canEdit={date >= today()} />}
 
       {error && <p className="notice error" role="alert">{error}</p>}
       {items === null && !error && <p>Loading…</p>}

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { AuthContext, type AuthState } from '../auth/AuthContext'
 import { StaffDay } from './StaffDay'
 
@@ -18,7 +18,9 @@ const past = {
 const future = { ...past, reference: 'APT-0000000002', startsAt: '2999-01-07T08:00:00.000Z', endsAt: '2999-01-07T09:00:00.000Z' }
 const cancelled = { ...past, reference: 'APT-0000000003', status: 'cancelled' }
 
-let fetchMock: ReturnType<typeof vi.fn>
+type Fetch = (url: string, init?: { method?: string; body?: string }) => unknown
+let fetchMock: Mock<Fetch>
+let breaksMock: Mock<Fetch>
 const reply = (status: number, body: unknown) => ({ ok: status < 400, status, statusText: '', json: async () => body })
 const consultant = { name: 'Nomsa', email: 'nomsa@example.com', accessToken: 'tok', roles: ['consultant'] }
 
@@ -32,8 +34,12 @@ function show(session: AuthState['session']) {
 }
 
 beforeEach(() => {
-  fetchMock = vi.fn()
-  vi.stubGlobal('fetch', fetchMock)
+  fetchMock = vi.fn<Fetch>()
+  breaksMock = vi.fn<Fetch>(async () => reply(404, { error: 'You are not working at a branch on that day.' }))
+  // Lunch break requests go to their own mock, so the appointment tests are not affected by them.
+  vi.stubGlobal('fetch', (url: string, init?: { method?: string; body?: string }) =>
+    String(url).includes('/staff/breaks') ? breaksMock(url, init) : fetchMock(url, init),
+  )
 })
 afterEach(() => vi.unstubAllGlobals())
 
@@ -63,10 +69,10 @@ describe('StaffDay', () => {
       .mockResolvedValueOnce(reply(200, [past]))
     show(consultant)
     await userEvent.click(await screen.findByRole('button', { name: 'No-show' }))
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ outcome: 'no_show' })
+    expect(JSON.parse(fetchMock.mock.calls[1]![1]!.body!)).toEqual({ outcome: 'no_show' })
     await waitFor(() => expect(screen.getByRole('button', { name: 'No-show' })).toHaveAttribute('aria-pressed', 'true'))
     await userEvent.click(screen.getByRole('button', { name: 'No-show' }))
-    expect(JSON.parse(fetchMock.mock.calls[3][1].body)).toEqual({ outcome: null })
+    expect(JSON.parse(fetchMock.mock.calls[3]![1]!.body!)).toEqual({ outcome: null })
   })
 
   it('explains when the person is not a consultant', async () => {
