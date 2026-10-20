@@ -53,6 +53,10 @@ describe('POST /appointments/:reference/reschedule', () => {
     expect(res.json().reference).toBe(booking.reference);
     expect(res.json().startsAt).toBe('2026-12-16T11:00:00.000Z');
     expect(res.json().consultant.id).toBe(booking.consultant.id);
+    expect(res.json().confirmation.to).toBe(clientA.email);
+    expect(res.json().confirmation.message).toContain('has moved to');
+    expect(res.json().confirmation.message).toContain('13:00');
+    expect(res.json().confirmation.message).toContain(booking.reference);
 
     const mine = await app.inject({
       method: 'GET',

@@ -4,7 +4,7 @@ import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { Chat } from '../components/Chat'
 import { ReschedulePanel } from '../components/ReschedulePanel'
-import type { Appointment } from '../types'
+import type { Appointment, Confirmation } from '../types'
 
 function formatWhen(a: Appointment) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -55,8 +55,11 @@ export function MyAppointments() {
     setMessage(null)
     setError(null)
     try {
-      await apiFetch(`/appointments/${reference}`, { method: 'DELETE', token })
-      setMessage(`Appointment ${reference} is cancelled.`)
+      const done = await apiFetch<{ confirmation: Confirmation }>(`/appointments/${reference}`, {
+        method: 'DELETE',
+        token,
+      })
+      setMessage(`${done.confirmation.message} A confirmation was sent to ${done.confirmation.to} (simulated).`)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
     }

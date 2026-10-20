@@ -12,6 +12,7 @@ const appointment = {
   endsAt: '2030-01-07T09:00:00.000Z',
   window: 'upcoming' as const,
 }
+const confirmation = (who: string) => ({ to: 'client@example.com', message: `Your Save appointment with ${who} has moved. Reference: APT-0123456789.` })
 const NOMSA = { id: '7', name: 'Nomsa' }
 const JOHAN = { id: '8', name: 'Johan' }
 const slot = (startsAt: string, consultants: { id: string; name: string }[]) => ({
@@ -51,12 +52,12 @@ describe('ReschedulePanel', () => {
   it('moves to a chosen time when the consultant is free', async () => {
     api({
       'GET /slots': () => reply(200, [slot('2030-01-07T11:00:00.000Z', [NOMSA, JOHAN])]),
-      'POST /reschedule': () => reply(200, { startsAt: '2030-01-07T11:00:00.000Z', consultant: NOMSA }),
+      'POST /reschedule': () => reply(200, { confirmation: confirmation('Nomsa') }),
     })
     show()
     await userEvent.click(await screen.findByRole('button', { name: '13:00' }))
     await userEvent.click(screen.getByRole('button', { name: 'Move to 13:00 with Nomsa' }))
-    expect(onMoved).toHaveBeenCalledWith(expect.stringContaining('13:00 with Nomsa'))
+    expect(onMoved).toHaveBeenCalledWith(expect.stringContaining('has moved. Reference: APT-0123456789. A confirmation was sent to client@example.com (simulated)'))
     const post = fetchMock.mock.calls.find((c) => c[1]?.method === 'POST')!
     expect(JSON.parse(post[1].body)).toEqual({ startsAt: '2030-01-07T11:00:00.000Z' })
   })
@@ -64,7 +65,7 @@ describe('ReschedulePanel', () => {
   it('asks what to do when the consultant is not free then, and lets the client see someone else', async () => {
     api({
       'GET /slots': () => reply(200, [slot('2030-01-07T11:00:00.000Z', [JOHAN])]),
-      'POST /reschedule': () => reply(200, { startsAt: '2030-01-07T11:00:00.000Z', consultant: JOHAN }),
+      'POST /reschedule': () => reply(200, { confirmation: confirmation('Johan') }),
     })
     show()
     await userEvent.click(await screen.findByRole('button', { name: '13:00' }))
@@ -85,7 +86,7 @@ describe('ReschedulePanel', () => {
       'GET /slots': (url) =>
         reply(200, [slot(url.includes('2030-01-09') ? later : '2030-01-07T11:00:00.000Z', url.includes('2030-01-09') ? [NOMSA] : [JOHAN])]),
       'GET /next-available': () => reply(200, [slot(later, [NOMSA])]),
-      'POST /reschedule': () => reply(200, { startsAt: later, consultant: NOMSA }),
+      'POST /reschedule': () => reply(200, { confirmation: confirmation('Nomsa') }),
     })
     show()
     await userEvent.click(await screen.findByRole('button', { name: '13:00' }))
