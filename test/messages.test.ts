@@ -68,6 +68,26 @@ describe('messages between a client and their consultant', () => {
     }
   });
 
+  it('counts unread messages for each side, and clears them once the thread is fetched', async () => {
+    const unread = async (url: string, user: object) =>
+      (await call(inWindow, 'GET', url, user)).json().find((a: { reference: string }) => a.reference === reference)
+        .unreadMessages;
+
+    expect(await unread('/appointments', CLIENT)).toBe(0);
+    await call(inWindow, 'POST', clientUrl(), CLIENT, { body: 'I am here' });
+    expect(await unread('/staff/appointments', NOMSA)).toBe(1);
+    expect(await unread('/appointments', CLIENT)).toBe(0); // your own messages are never unread
+
+    await call(inWindow, 'GET', staffUrl(), NOMSA);
+    expect(await unread('/staff/appointments', NOMSA)).toBe(0);
+
+    await call(inWindow, 'POST', staffUrl(), NOMSA, { body: 'On my way' });
+    await call(inWindow, 'POST', staffUrl(), NOMSA, { body: 'Two minutes' });
+    expect(await unread('/appointments', CLIENT)).toBe(2);
+    await call(inWindow, 'GET', clientUrl(), CLIENT);
+    expect(await unread('/appointments', CLIENT)).toBe(0);
+  });
+
   it('returns only newer messages when asked after an id', async () => {
     const first = (await call(inWindow, 'POST', clientUrl(), CLIENT, { body: 'one' })).json();
     await call(inWindow, 'POST', clientUrl(), CLIENT, { body: 'two' });

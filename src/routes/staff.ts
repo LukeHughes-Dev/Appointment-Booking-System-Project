@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { requireRole, type createAuthenticate } from '../auth.js';
 import { breakDay, replaceBreakDay, type Piece } from '../breaks.js';
 import { windowState } from '../rules.js';
+import { unreadMessagesSql } from '../messages.js';
 import { writeLimit } from '../limits.js';
 
 interface StaffRoutesOptions {
@@ -50,7 +51,7 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
       const { rows } = await pool.query(
         `SELECT a.reference, a.status, a.outcome, a.client_email, a.starts_at, a.ends_at,
                 b.id::text AS branch_id, b.name AS branch_name, b.timezone,
-                s.name AS service
+                s.name AS service, ${unreadMessagesSql('consultant')}
          FROM appointments a
          JOIN branches b      ON b.id = a.branch_id
          JOIN service_types s ON s.id = a.service_type_id
@@ -72,6 +73,7 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
         startsAt: r.starts_at.toISOString(),
         endsAt: r.ends_at.toISOString(),
         window: windowState(r.starts_at, now()),
+        unreadMessages: r.unread_messages,
       }));
     },
   );

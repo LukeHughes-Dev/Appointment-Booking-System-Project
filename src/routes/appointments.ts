@@ -7,6 +7,7 @@ import { rescheduleAppointment } from '../reschedules.js';
 import { findNextSlots, findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from '../slots.js';
 import { sendConfirmation } from '../notifications.js';
 import { windowState } from '../rules.js';
+import { unreadMessagesSql } from '../messages.js';
 import { writeLimit } from '../limits.js';
 
 interface AppointmentRoutesOptions {
@@ -70,7 +71,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       `SELECT a.reference, a.status, a.starts_at, a.ends_at,
               b.id::text AS branch_id, b.name AS branch_name, b.timezone,
               c.id::text AS consultant_id, c.name AS consultant_name,
-              s.name AS service
+              s.name AS service, ${unreadMessagesSql('client')}
        FROM appointments a
        JOIN branches b       ON b.id = a.branch_id
        JOIN consultants c    ON c.id = a.consultant_id
@@ -91,6 +92,7 @@ export const appointmentRoutes: FastifyPluginAsync<AppointmentRoutesOptions> = a
       startsAt: r.starts_at.toISOString(),
       endsAt: r.ends_at.toISOString(),
       window: windowState(r.starts_at, now()),
+      unreadMessages: r.unread_messages,
     }));
   });
 

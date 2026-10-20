@@ -42,8 +42,8 @@ export function MyAppointments() {
     if (!token) return
     const controller = new AbortController()
     const start = setTimeout(() => void load(controller.signal), 0)
-    // Refresh now and then, so the window buttons appear and disappear on time.
-    const refresh = setInterval(() => void load(controller.signal), 30_000)
+    // Refresh often, so the window buttons appear on time and new messages are noticed.
+    const refresh = setInterval(() => void load(controller.signal), 5_000)
     return () => {
       clearTimeout(start)
       clearInterval(refresh)
@@ -111,6 +111,11 @@ export function MyAppointments() {
                   onClick={() => setChatting(chatting === a.reference ? null : a.reference)}
                 >
                   Chat with {a.consultant.name}
+                  {a.unreadMessages > 0 && chatting !== a.reference && (
+                    <span className="badge" role="status">
+                      {a.unreadMessages} new
+                    </span>
+                  )}
                 </button>
               )}
               {a.window !== 'closed' && confirming !== a.reference && (

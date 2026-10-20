@@ -51,8 +51,8 @@ export function StaffDay() {
     if (!token) return
     const controller = new AbortController()
     const start = setTimeout(() => void load(controller.signal), 0)
-    // Refresh now and then, so a chat button appears when an appointment's window opens.
-    const refresh = setInterval(() => void load(controller.signal), 30_000)
+    // Refresh often, so a chat button appears when a window opens and new messages are noticed.
+    const refresh = setInterval(() => void load(controller.signal), 5_000)
     return () => {
       clearTimeout(start)
       clearInterval(refresh)
@@ -121,6 +121,11 @@ export function StaffDay() {
                     onClick={() => setChatting(chatting === a.reference ? null : a.reference)}
                   >
                     Chat with client
+                    {a.unreadMessages > 0 && chatting !== a.reference && (
+                      <span className="badge" role="status">
+                        {a.unreadMessages} new
+                      </span>
+                    )}
                   </button>
                 </div>
               )}

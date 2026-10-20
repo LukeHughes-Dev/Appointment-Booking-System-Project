@@ -13,6 +13,7 @@ const appointment = {
   startsAt: '2030-01-07T06:00:00.000Z',
   endsAt: '2030-01-07T07:00:00.000Z',
   window: 'upcoming' as const,
+  unreadMessages: 0,
 }
 
 let fetchMock: ReturnType<typeof vi.fn>
@@ -90,6 +91,17 @@ describe('MyAppointments', () => {
     show(signedIn)
     await screen.findAllByText('Save at Pretoria Menlyn')
     expect(screen.getAllByRole('button', { name: 'Change time' })).toHaveLength(1)
+  })
+
+  it('shows how many new messages are waiting, and hides the count once the chat is open', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('/messages') ? reply(200, []) : reply(200, [{ ...appointment, window: 'open', unreadMessages: 2 }]),
+    )
+    show(signedIn)
+    const button = await screen.findByRole('button', { name: /Chat with Nomsa/ })
+    expect(button).toHaveTextContent('2 new')
+    await userEvent.click(button)
+    expect(screen.queryByText('2 new')).not.toBeInTheDocument()
   })
 
   it('opens a chat with the consultant while the window is open', async () => {

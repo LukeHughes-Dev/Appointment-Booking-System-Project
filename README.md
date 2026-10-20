@@ -123,7 +123,9 @@ rescheduling, the appointment's own time does not block it, so moving 45 minutes
 slot works. The reference never changes.
 
 **Chat uses polling, not websockets.** A chat lasts about ten minutes, so the screen asks for new
-messages every three seconds (`?after=<id>`). That needs no long-lived connections and works behind any
+messages every three seconds (`?after=<id>`). Each side's appointment list is refreshed every five seconds and
+shows "N new" on the Chat button when the other side has written something unread. The API tracks how far each
+side has read (`message_reads`), and fetching the thread counts as reading it. That needs no long-lived connections and works behind any
 proxy. If it ever needed to scale, server-sent events could replace it without changing the endpoints.
 Messages can only be sent while the window is open; a thread stays readable afterwards.
 

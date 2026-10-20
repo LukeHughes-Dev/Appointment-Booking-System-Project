@@ -45,7 +45,26 @@ export async function listMessages(
      WHERE appointment_id = $1 AND id > $2::bigint ORDER BY id`,
     [appointment.id, after],
   );
+  // Fetching a thread is reading it: remember how far this side has got (never backwards).
+  if (rows.length > 0) {
+    await pool.query(
+      `INSERT INTO message_reads (appointment_id, reader, last_read_id) VALUES ($1, $2, $3::bigint)
+       ON CONFLICT (appointment_id, reader)
+       DO UPDATE SET last_read_id = GREATEST(message_reads.last_read_id, EXCLUDED.last_read_id)`,
+      [appointment.id, who.kind, rows[rows.length - 1].id],
+    );
+  }
   return rows.map(toMessage);
+}
+
+// SQL for "how many messages from the other side has this reader not read yet", for an
+// appointment row aliased `a`. `reader` is a fixed word, never user input.
+export function unreadMessagesSql(reader: 'client' | 'consultant') {
+  return `(SELECT count(*)::int FROM messages m
+           WHERE m.appointment_id = a.id AND m.sender <> '${reader}'
+             AND m.id > COALESCE((SELECT r.last_read_id FROM message_reads r
+                                  WHERE r.appointment_id = a.id AND r.reader = '${reader}'), 0)
+          ) AS unread_messages`;
 }
 
 // Sending is only possible while the appointment is booked and its 10-minute window is open.
