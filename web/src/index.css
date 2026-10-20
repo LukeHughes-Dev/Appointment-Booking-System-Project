@@ -95,6 +95,7 @@ a { color: var(--primary); }
 .choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .choice { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font: inherit; cursor: pointer; }
 .choice[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+.choice-note { font-weight: 600; text-decoration: none; display: inline-block; }
 .choice:disabled { background: #e6eaef; color: #7b8794; text-decoration: line-through; cursor: not-allowed; }
 .summary { margin: 0; }
 

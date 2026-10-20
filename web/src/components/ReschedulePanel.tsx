@@ -63,7 +63,9 @@ export function ReschedulePanel({ appointment, others, token, onMoved, onClose }
 
   const clash = (s: Slot) =>
     others.some((a) => new Date(a.startsAt) < new Date(s.endsAt) && new Date(s.startsAt) < new Date(a.endsAt))
-  const usable = (s: Slot) => s.available && !clash(s)
+  // The time the client already holds: it cannot be chosen again, only moved away from.
+  const current = (s: Slot) => s.startsAt === appointment.startsAt
+  const usable = (s: Slot) => s.available && !clash(s) && !current(s)
   const chosen = slots?.find((s) => s.startsAt === start) ?? null
 
   // Who is free at the chosen time: from the slot list, or from the API's last answer.
@@ -149,11 +151,18 @@ export function ReschedulePanel({ appointment, others, token, onMoved, onClose }
             type="button"
             className="choice"
             disabled={!usable(s)}
-            title={clash(s) ? 'You already have an appointment at this time' : undefined}
+            title={
+              current(s)
+                ? 'This is your appointment'
+                : clash(s)
+                  ? 'You already have an appointment at this time'
+                  : undefined
+            }
             aria-pressed={start === s.startsAt}
             onClick={() => pick(s.startsAt)}
           >
             {describe(s.startsAt, zone, false)}
+            {current(s) && <small className="choice-note"> Your appointment</small>}
           </button>
         ))}
       </div>
@@ -211,8 +220,9 @@ export function ReschedulePanel({ appointment, others, token, onMoved, onClose }
           {next?.length === 0 && <p className="notice">{consultant.name} has no free time in the next two weeks.</p>}
           <div className="choices">
             {next?.map((s) => (
-              <button key={s.startsAt} type="button" className="choice" onClick={() => takeNext(s)}>
+              <button key={s.startsAt} type="button" className="choice" disabled={current(s)} onClick={() => takeNext(s)}>
                 {describe(s.startsAt, zone, true)}
+                {current(s) && <small className="choice-note"> Your appointment</small>}
               </button>
             ))}
           </div>
