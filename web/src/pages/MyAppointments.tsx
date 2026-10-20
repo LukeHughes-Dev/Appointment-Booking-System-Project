@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ApiError, apiFetch } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { Chat } from '../components/Chat'
+import { ReschedulePanel } from '../components/ReschedulePanel'
 import type { Appointment } from '../types'
 
 function formatWhen(a: Appointment) {
@@ -23,6 +24,7 @@ export function MyAppointments() {
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [chatting, setChatting] = useState<string | null>(null)
+  const [moving, setMoving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = useCallback(
@@ -59,30 +61,6 @@ export function MyAppointments() {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
     }
     setConfirming(null)
-    await load()
-  }
-
-  async function reschedule(reference: string) {
-    setMessage(null)
-    setError(null)
-    try {
-      const moved = await apiFetch<{ startsAt: string }>(`/appointments/${reference}/reschedule`, {
-        method: 'POST',
-        token,
-      })
-      const when = items?.find((a) => a.reference === reference)
-      const text = new Intl.DateTimeFormat('en-GB', {
-        timeZone: when?.branch.timezone,
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(new Date(moved.startsAt))
-      setMessage(`Appointment ${reference} is moved to ${text}.`)
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')
-    }
     await load()
   }
 
@@ -123,19 +101,24 @@ export function MyAppointments() {
             </div>
             <div className="card-actions">
               {a.window === 'open' && confirming !== a.reference && (
-                <>
-                  <button
-                    type="button"
-                    className="button quiet"
-                    aria-expanded={chatting === a.reference}
-                    onClick={() => setChatting(chatting === a.reference ? null : a.reference)}
-                  >
-                    Chat with {a.consultant.name}
-                  </button>
-                  <button type="button" className="button" onClick={() => void reschedule(a.reference)}>
-                    Move to next available
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className="button quiet"
+                  aria-expanded={chatting === a.reference}
+                  onClick={() => setChatting(chatting === a.reference ? null : a.reference)}
+                >
+                  Chat with {a.consultant.name}
+                </button>
+              )}
+              {a.window !== 'closed' && confirming !== a.reference && (
+                <button
+                  type="button"
+                  className="button"
+                  aria-expanded={moving === a.reference}
+                  onClick={() => setMoving(moving === a.reference ? null : a.reference)}
+                >
+                  Change time
+                </button>
               )}
               {confirming === a.reference ? (
                 <>
@@ -152,6 +135,20 @@ export function MyAppointments() {
                 </button>
               )}
             </div>
+            {a.window !== 'closed' && moving === a.reference && (
+              <ReschedulePanel
+                appointment={a}
+                others={items.filter((o) => o.reference !== a.reference)}
+                token={token}
+                onClose={() => setMoving(null)}
+                onMoved={(text) => {
+                  setMoving(null)
+                  setError(null)
+                  setMessage(text)
+                  void load()
+                }}
+              />
+            )}
             {a.window === 'open' && chatting === a.reference && (
               <Chat
                 path={`/appointments/${a.reference}/messages`}
