@@ -2,9 +2,11 @@ import { config } from './config'
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  details: Record<string, unknown> // the rest of the error body, e.g. a code
+  constructor(status: number, message: string, details: Record<string, unknown> = {}) {
     super(message)
     this.status = status
+    this.details = details
   }
 }
 
@@ -27,7 +29,7 @@ export async function apiFetch<T>(path: string, { token, signal, method, body }:
   })
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
-    throw new ApiError(response.status, body.error ?? response.statusText)
+    throw new ApiError(response.status, body.error ?? response.statusText, body)
   }
   return response.json() as Promise<T>
 }

@@ -113,3 +113,7 @@ a { color: var(--primary); }
 .chat-bubble.theirs { justify-self: start; background: var(--primary-soft); }
 .chat-form { display: flex; gap: 8px; }
 .chat-form input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+
+.reschedule { flex: 1 1 100%; display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.reschedule h3 { margin: 0; }
+.reschedule .notice p { margin: 0 0 8px; }
