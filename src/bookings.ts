@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import type { Pool } from 'pg';
+import { withConsultantLock } from './db.js';
 import { findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from './slots.js';
 
 const EXCLUSION_VIOLATION = '23P01'; // an overlap rule was broken: see which constraint
 const CLIENT_OVERLAP_CONSTRAINT = 'appointments_client_no_overlap';
+const DEADLOCK = '40P01'; // two inserts for the same consultant waited on each other; Postgres cancelled one
 const UNIQUE_VIOLATION = '23505'; // only the reference is unique, so this means a reference clash
 
 export interface BookingRequest {
@@ -104,17 +106,19 @@ export async function createBooking(
   // the database exclusion constraint: if someone else got there first, the insert is
   // refused and we move on to the next consultant (or give up).
   for (const consultant of candidates) {
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        const inserted = await pool.query(
-          `INSERT INTO appointments
-             (reference, branch_id, consultant_id, service_type_id, client_id, client_email,
-              starts_at, ends_at)
-           SELECT $1, $2, $3, s.id, $4, $5, $6::timestamptz,
-                  $6::timestamptz + make_interval(mins => s.duration_minutes)
-           FROM service_types s WHERE s.name = $7
-           RETURNING reference, ends_at`,
-          [newReference(), req.branchId, consultant.id, client.id, client.email, startsAt, req.service],
+        const inserted = await withConsultantLock(pool, consultant.id, (db) =>
+          db.query(
+            `INSERT INTO appointments
+               (reference, branch_id, consultant_id, service_type_id, client_id, client_email,
+                starts_at, ends_at)
+             SELECT $1, $2, $3, s.id, $4, $5, $6::timestamptz,
+                    $6::timestamptz + make_interval(mins => s.duration_minutes)
+             FROM service_types s WHERE s.name = $7
+             RETURNING reference, ends_at`,
+            [newReference(), req.branchId, consultant.id, client.id, client.email, startsAt, req.service],
+          ),
         );
         const row = inserted.rows[0];
         return {
@@ -138,6 +142,10 @@ export async function createBooking(
           }
           break; // consultant taken: try the next one
         }
+        // Two simultaneous bookings for the same consultant can wait on each other's insert. Postgres
+        // cancels one of them: it is safe to try again, and it will then either succeed or get the
+        // normal "already taken" answer.
+        if (isPgError(err, DEADLOCK)) continue;
         if (isPgError(err, UNIQUE_VIOLATION)) continue; // reference clash: try a new reference
         throw err;
       }

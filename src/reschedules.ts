@@ -1,9 +1,11 @@
 import type { Pool } from 'pg';
+import { withConsultantLock } from './db.js';
 import type { AppointmentSummary } from './notifications.js';
 import { windowState } from './rules.js';
 import { findSlots, MIN_NOTICE_MINUTES, SLOT_GRID_MINUTES } from './slots.js';
 
 const EXCLUSION_VIOLATION = '23P01';
+const DEADLOCK = '40P01';
 const CLIENT_OVERLAP_CONSTRAINT = 'appointments_client_no_overlap';
 
 export type RescheduleResult =
@@ -78,48 +80,61 @@ export async function rescheduleAppointment(
     };
   }
 
-  try {
-    const updated = await pool.query(
-      `UPDATE appointments a
-       SET starts_at = $3::timestamptz,
-           ends_at = $3::timestamptz + make_interval(mins => s.duration_minutes),
-           consultant_id = $4
-       FROM service_types s
-       WHERE a.service_type_id = s.id AND a.reference = $1 AND a.client_id = $2
-         AND a.status = 'booked'
-       RETURNING a.starts_at, a.ends_at`,
-      [reference, clientId, startsAt, chosen.id],
-    );
-    if (updated.rowCount === 0) return { ok: false, reason: 'not_booked' };
-    const row = updated.rows[0];
-    return {
-      ok: true,
-      reference,
-      startsAt: row.starts_at.toISOString(),
-      endsAt: row.ends_at.toISOString(),
-      consultant: chosen,
-      appointment: {
-        reference,
-        service: appt.service,
-        branch: { id: appt.branch_id, name: appt.branch_name, timezone: appt.timezone },
-        consultant: chosen,
-        clientEmail,
-        startsAt: row.starts_at.toISOString(),
-      },
-    };
-  } catch (err) {
-    if ((err as { code?: string }).code === EXCLUSION_VIOLATION) {
-      if ((err as { constraint?: string }).constraint === CLIENT_OVERLAP_CONSTRAINT) {
-        return { ok: false, reason: 'client_busy' };
-      }
-      // Taken in the meantime: the same answer as if they had not been free to begin with.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const updated = await withConsultantLock(pool, chosen.id, (db) =>
+        db.query(
+          `UPDATE appointments a
+           SET starts_at = $3::timestamptz,
+               ends_at = $3::timestamptz + make_interval(mins => s.duration_minutes),
+               consultant_id = $4
+           FROM service_types s
+           WHERE a.service_type_id = s.id AND a.reference = $1 AND a.client_id = $2
+             AND a.status = 'booked'
+           RETURNING a.starts_at, a.ends_at`,
+          [reference, clientId, startsAt, chosen.id],
+        ),
+      );
+      if (updated.rowCount === 0) return { ok: false, reason: 'not_booked' };
+      const row = updated.rows[0];
       return {
-        ok: false,
-        reason: 'consultant_unavailable',
+        ok: true,
+        reference,
+        startsAt: row.starts_at.toISOString(),
+        endsAt: row.ends_at.toISOString(),
         consultant: chosen,
-        available: slot.consultants.filter((c) => c.id !== chosen.id),
+        appointment: {
+          reference,
+          service: appt.service,
+          branch: { id: appt.branch_id, name: appt.branch_name, timezone: appt.timezone },
+          consultant: chosen,
+          clientEmail,
+          startsAt: row.starts_at.toISOString(),
+        },
       };
+    } catch (err) {
+      // Two moves into the same time can wait on each other; Postgres cancels one, which can retry.
+      if ((err as { code?: string }).code === DEADLOCK) continue;
+      if ((err as { code?: string }).code === EXCLUSION_VIOLATION) {
+        if ((err as { constraint?: string }).constraint === CLIENT_OVERLAP_CONSTRAINT) {
+          return { ok: false, reason: 'client_busy' };
+        }
+        // Taken in the meantime: the same answer as if they had not been free to begin with.
+        return {
+          ok: false,
+          reason: 'consultant_unavailable',
+          consultant: chosen,
+          available: slot.consultants.filter((c) => c.id !== chosen.id),
+        };
+      }
+      throw err;
     }
-    throw err;
   }
+  // Every attempt was cancelled by a deadlock: treat it like a time that was just taken.
+  return {
+    ok: false,
+    reason: 'consultant_unavailable',
+    consultant: chosen,
+    available: slot.consultants.filter((c) => c.id !== chosen.id),
+  };
 }
