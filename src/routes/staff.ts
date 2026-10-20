@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Pool } from 'pg';
 import { requireRole, type createAuthenticate } from '../auth.js';
+import { windowState } from '../rules.js';
 
 interface StaffRoutesOptions {
   pool: Pool;
@@ -68,6 +69,7 @@ export const staffRoutes: FastifyPluginAsync<StaffRoutesOptions> = async (
         service: r.service,
         startsAt: r.starts_at.toISOString(),
         endsAt: r.ends_at.toISOString(),
+        window: windowState(r.starts_at, now()),
       }));
     },
   );

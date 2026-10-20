@@ -5,3 +5,15 @@
 // 5 minutes after it. After that the appointment counts as started.
 export const WINDOW_MINUTES_BEFORE_START = 5;
 export const WINDOW_MINUTES_AFTER_START = 5;
+
+export type WindowState = 'upcoming' | 'open' | 'closed';
+
+// Where "now" sits relative to an appointment's 10-minute window. The only place the
+// window is calculated, so the API, chat and reschedule can never disagree about it.
+export function windowState(startsAt: Date, now: Date): WindowState {
+  const opens = startsAt.getTime() - WINDOW_MINUTES_BEFORE_START * 60_000;
+  const closes = startsAt.getTime() + WINDOW_MINUTES_AFTER_START * 60_000;
+  if (now.getTime() < opens) return 'upcoming';
+  if (now.getTime() > closes) return 'closed';
+  return 'open';
+}
