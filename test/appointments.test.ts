@@ -137,6 +137,14 @@ describe('POST /appointments', () => {
     expect(new Set(names).size).toBe(4);
   });
 
+  it('never answers with a server error when many people book the same slot at once', async () => {
+    // Without the consultant lock, simultaneous inserts could deadlock and come back as 500.
+    const results = await Promise.all(Array.from({ length: 12 }, () => book({})));
+    expect(results.filter((r) => r.statusCode >= 500)).toHaveLength(0);
+    expect(results.filter((r) => r.statusCode === 201)).toHaveLength(4);
+    expect(results.filter((r) => r.statusCode === 409)).toHaveLength(8);
+  });
+
   it('allows back-to-back appointments for the same consultant', async () => {
     const first = await book({});
     const consultantId = first.json().consultant.id;

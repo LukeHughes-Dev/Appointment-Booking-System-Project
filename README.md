@@ -97,6 +97,12 @@ grid in the branch's own time zone, minus anything within 30 minutes of now (so 
 helped), minus consultants who are already booked. Booking reuses the very same query, so what the
 screen offers and what the API accepts can never disagree (`src/slots.ts`).
 
+**Branch hours and lunch are data.** Opening hours, closures, the longer month-end weekday hours (the 25th
+to the 1st, until 17:30) and consultants' lunch breaks are all tables, so changing them needs no code. Lunch
+comes from a scheduling feed (simulated here, behind a `ScheduleProvider` interface) that is copied in every
+hour; consultants can move or split their lunch on the day, which is logged and never overwritten by the
+feed. A booked appointment always wins over a break, and the clash is shown to the consultant.
+
 **The 10-minute window is one function.** `windowState()` in `src/rules.ts` is the only place that
 knows the window runs from 5 minutes before the start to 5 minutes after it. The API sends each
 appointment's `window` (`upcoming`, `open`, `closed`), and chat and reschedule use the same function (cancel uses the same
@@ -149,12 +155,11 @@ safely in a JSON number). Dates and times are always stored in UTC and shown in 
 
 ## Limits and honest notes
 
-- **"Any consultant"** picks the first free consultant alphabetically. A fairer version would pick
-  the least busy one.
+- **"Any consultant"** picks the free consultant with the fewest appointments that day, then the
+  first alphabetically, so work is spread evenly. It does not weigh how long the appointments are.
 - **Services** (Save, Transact, Credit) are also listed in the web app; loading them from the API is
   planned.
-- **Not built yet:** lunch breaks fed from a scheduling system (simulated, with fictional data),
-  the longer weekday hours at month end, rate limiting and an OpenAPI description.
+- **Not built yet:** rate limiting and an OpenAPI description.
 - **Walk-in rule (considered, not built).** Walk-ins are helped by consultants too. A consultant
   should not be called to a walk-in in the 5 minutes before one of their appointments starts. In
   code this would be one pure function, `isConsultantReserved(consultant, now)`, used by a walk-in
