@@ -91,3 +91,44 @@ export async function findSlots(pool: Pool, q: SlotQuery): Promise<Slot[]> {
     consultants: r.free_consultants,
   }));
 }
+
+export interface NextSlotsQuery {
+  branchId: string;
+  service: string;
+  consultantId: string;
+  after: Date; // only slots starting after this moment
+  now: Date;
+  limit: number;
+  days: number; // how many days ahead to look
+}
+
+// The next times a particular consultant is free, soonest first, across as many days as
+// needed. Uses findSlots day by day, so these are always real bookable times.
+export async function findNextSlots(pool: Pool, q: NextSlotsQuery): Promise<Slot[]> {
+  const { rows } = await pool.query(
+    "SELECT (($1::timestamptz) AT TIME ZONE timezone)::date::text AS day FROM branches WHERE id = $2",
+    [q.now.toISOString(), q.branchId],
+  );
+  if (rows.length === 0) return [];
+
+  const found: Slot[] = [];
+  for (let offset = 0; offset < q.days && found.length < q.limit; offset++) {
+    const day = new Date(`${rows[0].day}T00:00:00Z`);
+    day.setUTCDate(day.getUTCDate() + offset);
+    const slots = await findSlots(pool, {
+      branchId: q.branchId,
+      date: day.toISOString().slice(0, 10),
+      service: q.service,
+      now: q.now,
+      gridMinutes: SLOT_GRID_MINUTES,
+      noticeMinutes: MIN_NOTICE_MINUTES,
+    });
+    for (const slot of slots) {
+      if (new Date(slot.startsAt) <= q.after) continue;
+      if (!slot.consultants.some((c) => c.id === q.consultantId)) continue;
+      found.push(slot);
+      if (found.length >= q.limit) break;
+    }
+  }
+  return found;
+}
